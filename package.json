@@ -14,10 +14,10 @@
     "start": "node ./build/index.js",
     "ts-lint": "tsc --noEmit"
   },
-  "dependencies": {},
   "devDependencies": {
     "@commitlint/cli": "20.1.0",
     "@commitlint/config-conventional": "20.0.0",
+    "@types/node": "24.13.3",
     "esbuild": "0.28.1",
     "eslint": "9.38.0",
     "eslint-config-prettier": "10.1.1",
@@ -32,8 +32,8 @@
     "prettier": "3.6.2",
     "sort-package-json": "3.4.0",
     "tsx": "4.22.4",
-    "typescript": "5.9.2",
-    "typescript-eslint": "8.40.0"
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.67.0"
   },
   "engines": {
     "node": ">=24.0.0"
