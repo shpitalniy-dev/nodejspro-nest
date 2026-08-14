@@ -105,7 +105,7 @@ container.bind(A_TOKEN).to(AService);
 container.bind(B_TOKEN).to(BService);
 
 try {
-  container.get(AService); // should throw here
+  container.get(AService);
 } catch (error) {
   logger.log(`Error: ${(error as Error).message}`);
 }
