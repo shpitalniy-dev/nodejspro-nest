@@ -111,6 +111,7 @@ export default [
         ERROR,
         {
           groups: [
+            ['reflect-metadata'],
             [
               '^(assert|buffer|child_process|crypto|dns|events|fs|http|https|os|path|stream|url|util|zlib)(/.*|$)',
             ],

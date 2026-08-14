@@ -1,6 +1,6 @@
 services:
-  server:
-    image: nodejspro-nest-server:dev
+  api:
+    image: nodejspro-nest-api:dev
     build:
       context: .
       target: deps
