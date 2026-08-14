@@ -16,11 +16,7 @@
     "rewriteRelativeImportExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
-
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "noEmit": true
   },
   "include": ["**/*.ts"],
   "exclude": ["node_modules", "build"]
