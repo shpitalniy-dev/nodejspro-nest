@@ -1,0 +1,7 @@
+FROM node:24-slim
+WORKDIR /app
+COPY . .
+RUN npm ci --ignore-scripts --no-audit --no-fund
+RUN npm run build:prod
+EXPOSE 3000
+CMD ["node", "./build/index.js"]
