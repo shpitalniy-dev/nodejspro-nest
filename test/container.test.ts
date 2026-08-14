@@ -7,6 +7,32 @@ import { Container } from '../src/container.ts';
 import { Inject } from '../src/decorators/inject.ts';
 import { Injectable } from '../src/decorators/injectable.ts';
 
+test('Graph of dependencies is built correctly', () => {
+  @Injectable()
+  class A {}
+
+  @Injectable()
+  class B {
+    constructor(private a: A) {}
+  }
+
+  @Injectable()
+  class C {
+    constructor(private b: B) {}
+  }
+
+  const container = new Container();
+  container.bind(A).toSelf();
+  container.bind(B).toSelf();
+  container.bind(C).toSelf();
+
+  const c = container.get(C);
+
+  assert.ok(c instanceof C);
+  assert.ok(c['b'] instanceof B);
+  assert.ok(c['b']['a'] instanceof A);
+});
+
 test('Singleton returns true', () => {
   @Injectable()
   class Singleton {}
