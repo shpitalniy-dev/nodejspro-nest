@@ -1,6 +1,6 @@
 services:
-  server:
-    image: nodejspro-nest-server:prod
+  api:
+    image: nodejspro-nest-api:prod
     build:
       context: .
       target: runner

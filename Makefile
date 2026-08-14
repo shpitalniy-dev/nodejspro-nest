@@ -1,4 +1,4 @@
-.PHONY: dev-build dev-up dev-down dev-logs prod-build prod-up prod-down prod-logs status
+.PHONY: dev-build dev-up dev-down dev-logs prod-build prod-up prod-down prod-logs status test
 
 dev-build:
 	docker compose build
@@ -26,3 +26,6 @@ prod-logs:
 
 status:
 	docker compose ps
+
+test:
+	docker compose run --rm api npm test
