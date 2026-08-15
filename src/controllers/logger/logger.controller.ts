@@ -16,7 +16,7 @@ export class Logger {
     return `[${this.prefix}] [${this.config.env}]: ${message?.toString()}`;
   }
 
-  log(message: unknown) {
+  info(message: unknown) {
     console.log(this.formatMessage(message));
   }
 
