@@ -23,16 +23,24 @@ export class Dispatcher {
   ) {}
 
   private notFound(res: http.ServerResponse) {
-    res.statusCode = 404;
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
     res.end('Not Found');
   }
 
-  private error(res: http.ServerResponse, message: string) {
-    res.statusCode = 500;
-    res.end(message || 'Internal Server Error');
+  private handleError(res: http.ServerResponse, error: Error) {
+    this.logger.error(error);
+    const message = this.config.isProduction
+      ? 'Internal Server Error'
+      : error.message;
+
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end(message);
   }
 
-  private handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+  private async handleRequest(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ) {
     const { method, url = '' } = req;
     const route = this.router.match(url, method as HttpMethod);
 
@@ -44,15 +52,13 @@ export class Dispatcher {
 
     try {
       const instance = this.container.get(route.controller);
-      const result = (instance as any)[route.property]();
-
+      const result = await (instance as any)[route.property]();
       const json = JSON.stringify(result);
-      res.setHeader('Content-Type', 'application/json');
-      res.statusCode = 200;
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(json);
     } catch (error) {
-      this.logger.error(error);
-      this.error(res, (error as Error).message);
+      this.handleError(res, error as Error);
     }
   }
 
