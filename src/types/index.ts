@@ -8,3 +8,18 @@ export type Scope = 'singleton' | 'transient';
 export interface InjectableOptions {
   scope?: Scope;
 }
+
+export const httpMethods = {
+  get: 'GET',
+  post: 'POST',
+  put: 'PUT',
+  delete: 'DELETE',
+} as const;
+
+export type HttpMethod = (typeof httpMethods)[keyof typeof httpMethods];
+
+export interface ControllerRouteItem {
+  method: HttpMethod;
+  path: string | undefined;
+  property: string | symbol;
+}
