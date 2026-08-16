@@ -9,6 +9,7 @@ import { Inject } from './decorators/inject.ts';
 import { Injectable } from './decorators/injectable.ts';
 import { getMethodParamsMap } from './decorators/params.ts';
 import { type HttpMethod, methodParamTypes } from './types/index.ts';
+import { hasBody, parseBody } from './utils/http.ts';
 import { Container } from './container.ts';
 import { Router } from './router.ts';
 
@@ -54,19 +55,27 @@ export class Dispatcher {
     try {
       const query = url.split('?')[1] ?? '';
       const queryParams = new URLSearchParams(query);
-      const methodParams = getMethodParamsMap(route.controller, route.property);
+      const body = hasBody(req) ? await parseBody(req) : undefined;
 
       const args: unknown[] = [];
+      const methodParams = getMethodParamsMap(route.controller, route.property);
       methodParams.forEach(param => {
         if (param.type === methodParamTypes.param) {
-          args[param.index] = route.params[param.name];
+          args[param.index] = param.name
+            ? route.params[param.name]
+            : route.params;
         }
 
         if (param.type === methodParamTypes.query) {
-          args[param.index] = queryParams.get(param.name) ?? undefined;
+          args[param.index] = param.name
+            ? (queryParams.get(param.name) ?? undefined)
+            : Object.fromEntries(queryParams);
         }
 
-        // @ToDo: process body
+        if (param.type === methodParamTypes.body) {
+          args[param.index] = param.name ? body?.[param.name] : body;
+        }
+
         return undefined;
       });
 

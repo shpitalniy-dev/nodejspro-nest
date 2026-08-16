@@ -28,7 +28,7 @@ const paramDecoratorFactory =
     paramsForProperty.push({
       index: parameterIndex,
       type,
-      name: name ?? '',
+      name,
     });
     existingParams.set(propertyKey as string, paramsForProperty);
 

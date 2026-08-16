@@ -4,7 +4,7 @@ import { getControllerPrefix } from './decorators/controller.ts';
 import { Injectable } from './decorators/injectable.ts';
 import { getControllerRoutes } from './decorators/methods.ts';
 import type { Ctor, HttpMethod } from './types/index.ts';
-import { buildSegments } from './utils/index.ts';
+import { buildSegments } from './utils/segments.ts';
 
 type HandlerItem = {
   controller: Ctor;

@@ -20,8 +20,8 @@ export type HttpMethod = (typeof httpMethods)[keyof typeof httpMethods];
 
 export interface ControllerRouteItem {
   method: HttpMethod;
-  path: string | undefined;
   property: string | symbol;
+  path?: string;
 }
 
 export const methodParamTypes = {
@@ -36,7 +36,7 @@ export type MethodParamType =
 export interface MethodParamItem {
   index: number;
   type: MethodParamType;
-  name: string;
+  name?: string;
 }
 
 export type MethodParamsMap = Map<string | symbol, MethodParamItem[]>;

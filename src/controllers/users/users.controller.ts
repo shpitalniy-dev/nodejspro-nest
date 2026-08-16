@@ -2,8 +2,8 @@ import 'reflect-metadata';
 
 import { Controller } from '../../decorators/controller.ts';
 import { Injectable } from '../../decorators/injectable.ts';
-import { Get } from '../../decorators/methods.ts';
-import { Param, Query } from '../../decorators/params.ts';
+import { Get, Post } from '../../decorators/methods.ts';
+import { Body, Param, Query } from '../../decorators/params.ts';
 
 @Injectable()
 @Controller('users')
@@ -19,5 +19,10 @@ export class Users {
   @Get(':id')
   getUser(@Param('id') id: string) {
     return { id };
+  }
+
+  @Post()
+  createUser(@Body('email') email: string) {
+    return { email };
   }
 }
