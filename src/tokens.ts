@@ -6,3 +6,4 @@ export const LOGGER_PREFIX = Symbol('logger_prefix');
 
 export const CONTROLLER_PREFIX = Symbol('controller_prefix');
 export const CONTROLLER_ROUTES = Symbol('controller_routes');
+export const METHOD_PARAMS = Symbol('method_params');

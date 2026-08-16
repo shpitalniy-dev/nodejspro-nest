@@ -4,50 +4,90 @@ import { getControllerPrefix } from './decorators/controller.ts';
 import { Injectable } from './decorators/injectable.ts';
 import { getControllerRoutes } from './decorators/methods.ts';
 import type { Ctor, HttpMethod } from './types/index.ts';
-import { buildFullPath } from './utils/index.ts';
+import { buildSegments } from './utils/index.ts';
 
-type HandlerItem = { controller: Ctor; property: string | symbol };
-type MethodRouteMap = Map<HttpMethod, HandlerItem>;
-type PathRouteMap = Map<string, MethodRouteMap>;
+type HandlerItem = {
+  controller: Ctor;
+  property: string | symbol;
+  params: { [key: string]: string };
+};
+
+type RouteItem = {
+  segments: string[];
+  controller: Ctor;
+  property: string | symbol;
+};
 
 @Injectable()
 export class Router {
-  private routes: PathRouteMap = new Map();
+  // @ToDo: save routes by controller prefix to optimize search
+  // @ToDo: what if prefix is just /
+  private routes: Map<HttpMethod, RouteItem[]> = new Map();
 
   register(ctor: Ctor) {
     const ctorPrefix = getControllerPrefix(ctor);
     const ctorRoutes = getControllerRoutes(ctor);
 
     for (const ctorRoute of ctorRoutes) {
-      const fullPath = buildFullPath(ctorPrefix, ctorRoute.path);
+      const segments = buildSegments(ctorPrefix, ctorRoute.path);
 
-      if (!this.routes.has(fullPath)) {
-        this.routes.set(fullPath, new Map());
+      if (!this.routes.has(ctorRoute.method)) {
+        this.routes.set(ctorRoute.method, []);
       }
 
-      const route = this.routes.get(fullPath) as MethodRouteMap;
-      route.set(ctorRoute.method, {
+      const route = this.routes.get(ctorRoute.method) as RouteItem[];
+      route.push({
+        segments,
         controller: ctor,
         property: ctorRoute.property,
       });
     }
   }
 
-  // @ToDo: handle dynamic segments in the path
-  // @ToDo: handle query parameters in the path
   match(path: string, method: HttpMethod): HandlerItem | null {
-    const route = this.routes.get(path);
+    const route = this.routes.get(method);
 
     if (!route) {
       return null;
     }
 
-    const handler = route.get(method);
+    const pathWithoutQuery = path.split('?')[0];
+    const pathSegments = pathWithoutQuery.split('/').filter(Boolean);
 
-    if (!handler) {
+    // @Note: return routes /user/me, /user/:id
+    const matchedRoutes = route.filter(({ segments }) => {
+      if (segments.length !== pathSegments.length) return false;
+
+      for (let i = 0; i < segments.length; i++) {
+        const routeSegment = segments[i];
+        const pathSegment = pathSegments[i];
+        if (routeSegment.startsWith(':')) continue;
+        if (routeSegment !== pathSegment) return false;
+      }
+
+      return true;
+    });
+
+    if (!matchedRoutes.length) {
       return null;
     }
 
-    return handler;
+    // @Note: exact match first
+    const matchedRoute =
+      matchedRoutes.find(({ segments }) =>
+        segments.every((s, inx) => s === pathSegments[inx]),
+      ) ?? matchedRoutes[0];
+
+    const params = matchedRoute.segments.reduce(
+      (acc, s, inx) =>
+        s.startsWith(':') ? { ...acc, [s.slice(1)]: pathSegments[inx] } : acc,
+      {},
+    );
+
+    return {
+      controller: matchedRoute.controller,
+      property: matchedRoute.property,
+      params,
+    };
   }
 }

@@ -23,3 +23,20 @@ export interface ControllerRouteItem {
   path: string | undefined;
   property: string | symbol;
 }
+
+export const methodParamTypes = {
+  body: 'body',
+  query: 'query',
+  param: 'param',
+} as const;
+
+export type MethodParamType =
+  (typeof methodParamTypes)[keyof typeof methodParamTypes];
+
+export interface MethodParamItem {
+  index: number;
+  type: MethodParamType;
+  name: string;
+}
+
+export type MethodParamsMap = Map<string | symbol, MethodParamItem[]>;

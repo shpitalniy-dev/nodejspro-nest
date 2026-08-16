@@ -1,5 +1,2 @@
-export const buildFullPath = (prefix: string, route?: string): string => {
-  const fullPath = [prefix, route].filter(Boolean).join('/');
-
-  return fullPath.startsWith('/') ? fullPath : `/${fullPath}`;
-};
+export const buildSegments = (prefix: string, route?: string): string[] =>
+  [prefix, route].join('/').split('/').filter(Boolean);

@@ -7,7 +7,8 @@ import { Config } from './controllers/config/index.ts';
 import { Logger } from './controllers/logger/index.ts';
 import { Inject } from './decorators/inject.ts';
 import { Injectable } from './decorators/injectable.ts';
-import type { HttpMethod } from './types/index.ts';
+import { getMethodParamsMap } from './decorators/params.ts';
+import { type HttpMethod, methodParamTypes } from './types/index.ts';
 import { Container } from './container.ts';
 import { Router } from './router.ts';
 
@@ -51,8 +52,26 @@ export class Dispatcher {
     }
 
     try {
+      const query = url.split('?')[1] ?? '';
+      const queryParams = new URLSearchParams(query);
+      const methodParams = getMethodParamsMap(route.controller, route.property);
+
+      const args: unknown[] = [];
+      methodParams.forEach(param => {
+        if (param.type === methodParamTypes.param) {
+          args[param.index] = route.params[param.name];
+        }
+
+        if (param.type === methodParamTypes.query) {
+          args[param.index] = queryParams.get(param.name) ?? undefined;
+        }
+
+        // @ToDo: process body
+        return undefined;
+      });
+
       const instance = this.container.get(route.controller);
-      const result = await (instance as any)[route.property]();
+      const result = await (instance as any)[route.property](...args);
       const json = JSON.stringify(result);
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
