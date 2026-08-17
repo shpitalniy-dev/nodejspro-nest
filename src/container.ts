@@ -28,7 +28,7 @@ export class Container {
     };
   }
 
-  get<T>(target: Ctor<T>, path: string[] = []) {
+  get<T extends object>(target: Ctor<T>, path: string[] = []) {
     if (!hasInjectableMetadata(target)) {
       throw new Error(`${target.name} misses @Injectable() decorator`);
     }

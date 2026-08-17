@@ -59,10 +59,8 @@ export class Router {
       if (segments.length !== pathSegments.length) return false;
 
       for (let i = 0; i < segments.length; i++) {
-        const routeSegment = segments[i];
-        const pathSegment = pathSegments[i];
-        if (routeSegment.startsWith(':')) continue;
-        if (routeSegment !== pathSegment) return false;
+        if (segments[i].startsWith(':')) continue;
+        if (segments[i] !== pathSegments[i]) return false;
       }
 
       return true;

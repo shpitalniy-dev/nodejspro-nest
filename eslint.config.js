@@ -159,7 +159,7 @@ export default [
       ],
       '@typescript-eslint/no-use-before-define': OFF,
       '@typescript-eslint/triple-slash-reference': OFF,
-      '@typescript-eslint/consistent-type-imports': ERROR,
+      '@typescript-eslint/consistent-type-imports': OFF,
       '@typescript-eslint/no-var-requires': WARN,
       '@typescript-eslint/no-require-imports': OFF,
 

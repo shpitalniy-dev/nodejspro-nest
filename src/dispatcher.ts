@@ -8,6 +8,8 @@ import { Logger } from './controllers/logger/index.ts';
 import { Inject } from './decorators/inject.ts';
 import { Injectable } from './decorators/injectable.ts';
 import { getMethodParamsMap } from './decorators/params.ts';
+import { HttpError } from './exceptions/http.exceptions.ts';
+import { validateBody } from './pipes/validation.pipe.ts';
 import { type HttpMethod, methodParamTypes } from './types/index.ts';
 import { hasBody, parseBody } from './utils/http.ts';
 import { Container } from './container.ts';
@@ -29,14 +31,21 @@ export class Dispatcher {
     res.end('Not Found');
   }
 
-  private handleError(res: http.ServerResponse, error: Error) {
+  private handleError(res: http.ServerResponse, error: unknown) {
     this.logger.error(error);
+
+    const isHttpError = error instanceof HttpError;
+    const statusCode = isHttpError ? error.statusCode : 500;
     const message = this.config.isProduction
       ? 'Internal Server Error'
-      : error.message;
+      : (error as Error).message;
 
-    res.writeHead(500, { 'Content-Type': 'text/plain' });
-    res.end(message);
+    const hasErrors =
+      isHttpError && Array.isArray(error.errors) && error.errors.length > 0;
+    const contentType = hasErrors ? 'application/json' : 'text/plain';
+
+    res.writeHead(statusCode, { 'Content-Type': contentType });
+    res.end(hasErrors ? JSON.stringify(error.errors) : message);
   }
 
   private async handleRequest(
@@ -55,11 +64,11 @@ export class Dispatcher {
     try {
       const query = url.split('?')[1] ?? '';
       const queryParams = new URLSearchParams(query);
-      const body = hasBody(req) ? await parseBody(req) : undefined;
 
       const args: unknown[] = [];
       const methodParams = getMethodParamsMap(route.controller, route.property);
-      methodParams.forEach(param => {
+
+      for (const param of methodParams ?? []) {
         if (param.type === methodParamTypes.param) {
           args[param.index] = param.name
             ? route.params[param.name]
@@ -73,11 +82,13 @@ export class Dispatcher {
         }
 
         if (param.type === methodParamTypes.body) {
-          args[param.index] = param.name ? body?.[param.name] : body;
+          const body = hasBody(req) ? await parseBody(req) : undefined;
+          const value = param.name ? body?.[param.name] : body;
+          args[param.index] = param.dtoClass
+            ? await validateBody(param.dtoClass, value)
+            : value;
         }
-
-        return undefined;
-      });
+      }
 
       const instance = this.container.get(route.controller);
       const result = await (instance as any)[route.property](...args);
@@ -85,8 +96,8 @@ export class Dispatcher {
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(json);
-    } catch (error) {
-      this.handleError(res, error as Error);
+    } catch (httpError) {
+      this.handleError(res, httpError);
     }
   }
 

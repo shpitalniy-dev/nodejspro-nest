@@ -4,6 +4,7 @@ import { Controller } from '../../decorators/controller.ts';
 import { Injectable } from '../../decorators/injectable.ts';
 import { Get, Post } from '../../decorators/methods.ts';
 import { Body, Param, Query } from '../../decorators/params.ts';
+import { CreateUserDto } from '../../dto/create-user.dto.ts';
 
 @Injectable()
 @Controller('users')
@@ -22,7 +23,7 @@ export class Users {
   }
 
   @Post()
-  createUser(@Body('email') email: string) {
-    return { email };
+  createUser(@Body() user: CreateUserDto) {
+    return user;
   }
 }

@@ -1,7 +1,7 @@
 export type NodeEnv = 'development' | 'production';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Ctor<T = unknown> = new (...args: any[]) => T;
+export type Ctor<T = object> = new (...args: any[]) => T;
 
 export type Scope = 'singleton' | 'transient';
 
@@ -37,6 +37,7 @@ export interface MethodParamItem {
   index: number;
   type: MethodParamType;
   name?: string;
+  dtoClass?: Ctor;
 }
 
 export type MethodParamsMap = Map<string | symbol, MethodParamItem[]>;

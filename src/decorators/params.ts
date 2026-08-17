@@ -21,6 +21,19 @@ const paramDecoratorFactory =
   (type: MethodParamType) =>
   (name?: string): ParameterDecorator =>
   (target, propertyKey, parameterIndex) => {
+    if (!propertyKey) {
+      throw new Error(
+        'Parameter decorators cannot be used on constructor parameters',
+      );
+    }
+
+    const paramTypes = Reflect.getMetadata(
+      'design:paramtypes',
+      target,
+      propertyKey,
+    ) as Ctor[] | undefined;
+
+    const dtoClass = paramTypes?.[parameterIndex];
     const existingParams = getControllerMethodsParams(
       target.constructor as Ctor,
     );
@@ -29,6 +42,7 @@ const paramDecoratorFactory =
       index: parameterIndex,
       type,
       name,
+      dtoClass,
     });
     existingParams.set(propertyKey as string, paramsForProperty);
 
