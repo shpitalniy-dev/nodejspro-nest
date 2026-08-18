@@ -1,21 +1,18 @@
 import 'reflect-metadata';
 
 import { METHOD_PARAMS } from '../tokens.ts';
-import type {
-  Ctor,
-  MethodParamItem,
-  MethodParamsMap,
-  MethodParamType,
-} from '../types/index.ts';
+import type { Ctor, MethodParamsMap, MethodParamType } from '../types/index.ts';
 
-export const getControllerMethodsParams = (target: Ctor): MethodParamsMap =>
-  (Reflect.getMetadata(METHOD_PARAMS, target) ?? new Map()) as MethodParamsMap;
+export const getControllerMethodsParams = (target: Ctor) =>
+  Reflect.getMetadata(METHOD_PARAMS, target) as MethodParamsMap | undefined;
+
+export const getOwnControllerMethodsParams = (target: Ctor) =>
+  Reflect.getOwnMetadata(METHOD_PARAMS, target) as MethodParamsMap | undefined;
 
 export const getMethodParamsMap = (
   target: Ctor,
-  method: string | symbol,
-): MethodParamItem[] =>
-  getControllerMethodsParams(target).get(method as string) ?? [];
+  propertyKey: string | symbol,
+) => (getControllerMethodsParams(target) ?? new Map()).get(propertyKey) ?? [];
 
 const paramDecoratorFactory =
   (type: MethodParamType) =>
@@ -33,20 +30,22 @@ const paramDecoratorFactory =
       propertyKey,
     ) as Ctor[] | undefined;
 
-    const dtoClass = paramTypes?.[parameterIndex];
-    const existingParams = getControllerMethodsParams(
+    const ownParams = getOwnControllerMethodsParams(target.constructor as Ctor);
+    const inheritedParams = getControllerMethodsParams(
       target.constructor as Ctor,
     );
-    const paramsForProperty = existingParams.get(propertyKey as string) || [];
+
+    const params = ownParams ?? new Map(inheritedParams ?? []);
+    const paramsForProperty = [...(params.get(propertyKey as string) || [])];
     paramsForProperty.push({
       index: parameterIndex,
       type,
       name,
-      dtoClass,
+      dtoClass: paramTypes?.[parameterIndex],
     });
-    existingParams.set(propertyKey as string, paramsForProperty);
+    params.set(propertyKey as string, paramsForProperty);
 
-    Reflect.defineMetadata(METHOD_PARAMS, existingParams, target.constructor);
+    Reflect.defineMetadata(METHOD_PARAMS, params, target.constructor);
   };
 
 export const Param = paramDecoratorFactory('param');

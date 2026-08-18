@@ -4,17 +4,24 @@ import { CONTROLLER_ROUTES } from '../tokens.ts';
 import type { ControllerRouteItem, Ctor, HttpMethod } from '../types/index.ts';
 import { httpMethods } from '../types/index.ts';
 
-export const getControllerRoutes = (target: Ctor): ControllerRouteItem[] =>
-  Reflect.getMetadata(CONTROLLER_ROUTES, target) ?? [];
+export const getControllerRoutes = (target: Ctor) =>
+  Reflect.getMetadata(CONTROLLER_ROUTES, target) as
+    | ControllerRouteItem[]
+    | undefined;
+
+export const getOwnControllerRoutes = (target: Ctor) =>
+  Reflect.getOwnMetadata(CONTROLLER_ROUTES, target) as
+    | ControllerRouteItem[]
+    | undefined;
 
 const methodDecoratorFactory =
   (method: HttpMethod) =>
   (path?: string): MethodDecorator =>
   (target, propertyKey, _descriptor) => {
-    const routes: ControllerRouteItem[] = getControllerRoutes(
-      target.constructor as Ctor,
-    );
+    const ownRoutes = getOwnControllerRoutes(target.constructor as Ctor);
+    const inheritedRoutes = getControllerRoutes(target.constructor as Ctor);
 
+    const routes = ownRoutes ?? [...(inheritedRoutes ?? [])];
     routes.push({
       method,
       path,

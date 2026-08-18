@@ -26,7 +26,7 @@ export class Router {
     const ctorPrefix = getControllerPrefix(ctor);
     const ctorRoutes = getControllerRoutes(ctor);
 
-    for (const ctorRoute of ctorRoutes) {
+    for (const ctorRoute of ctorRoutes ?? []) {
       const segments = buildSegments(ctorPrefix, ctorRoute.path);
 
       if (!this.routes.has(ctorRoute.method)) {
