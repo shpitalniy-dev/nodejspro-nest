@@ -109,8 +109,8 @@ export class Dispatcher {
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(json);
-    } catch (httpError) {
-      this.handleError(res, httpError);
+    } catch (error) {
+      this.handleError(res, error);
     }
   }
 
