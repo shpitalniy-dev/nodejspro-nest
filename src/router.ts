@@ -20,8 +20,6 @@ type RouteItem = {
 
 @Injectable()
 export class Router {
-  // @ToDo: save routes by controller prefix to optimize search
-  // @ToDo: what if prefix is just /
   private routes: Map<HttpMethod, RouteItem[]> = new Map();
 
   register(ctor: Ctor) {

@@ -64,6 +64,7 @@ export class Dispatcher {
     try {
       const query = url.split('?')[1] ?? '';
       const queryParams = new URLSearchParams(query);
+      const body = hasBody(req) ? await parseBody(req) : undefined;
 
       const args: unknown[] = [];
       const methodParams = getMethodParamsMap(route.controller, route.property);
@@ -82,7 +83,6 @@ export class Dispatcher {
         }
 
         if (param.type === methodParamTypes.body) {
-          const body = hasBody(req) ? await parseBody(req) : undefined;
           const value = param.name ? body?.[param.name] : body;
           args[param.index] = param.dtoClass
             ? await validateBody(param.dtoClass, value)
