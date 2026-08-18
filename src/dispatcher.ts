@@ -15,6 +15,14 @@ import { hasBody, parseBody } from './utils/http.ts';
 import { Container } from './container.ts';
 import { Router } from './router.ts';
 
+const TRIVIAL_TYPES = new Set<unknown>([
+  String,
+  Number,
+  Boolean,
+  Array,
+  Object,
+]);
+
 @Injectable()
 export class Dispatcher {
   private httpServer: http.Server | null = null;
@@ -84,8 +92,13 @@ export class Dispatcher {
 
         if (param.type === methodParamTypes.body) {
           const value = param.name ? body?.[param.name] : body;
-          args[param.index] = param.dtoClass
-            ? await validateBody(param.dtoClass, value)
+          const dtoClass =
+            param.dtoClass && !TRIVIAL_TYPES.has(param.dtoClass)
+              ? param.dtoClass
+              : undefined;
+
+          args[param.index] = dtoClass
+            ? await validateBody(dtoClass, value)
             : value;
         }
       }
