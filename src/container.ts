@@ -11,7 +11,7 @@ const getInjectableOptions = (target: Ctor): InjectableOptions =>
   (Reflect.getMetadata(INJECTABLE_OPTIONS, target) ?? {}) as InjectableOptions;
 
 const hasInjectableMetadata = (target: Ctor): boolean =>
-  (Reflect.getMetadata(INJECTABLE, target) ?? false) as boolean;
+  (Reflect.getOwnMetadata(INJECTABLE, target) ?? false) as boolean;
 
 export class Container {
   private recipes = new Map<unknown, unknown>();
@@ -28,7 +28,7 @@ export class Container {
     };
   }
 
-  get<T>(target: Ctor<T>, path: string[] = []) {
+  get<T extends object>(target: Ctor<T>, path: string[] = []) {
     if (!hasInjectableMetadata(target)) {
       throw new Error(`${target.name} misses @Injectable() decorator`);
     }
@@ -54,11 +54,13 @@ export class Container {
     const deps = getParamTypes(target);
     const injectMetadata = getInjectMetadata(target);
     const args = deps.map((dep, inx) => {
-      const token = injectMetadata.get(inx);
+      const token = injectMetadata?.get(inx);
       const recipe = token ? this.recipes.get(token) : this.recipes.get(dep);
 
       if (typeof recipe === 'undefined') {
-        throw new Error(`No binding found for dependency: ${dep.name}`);
+        throw new Error(
+          `Recipe for dep at index ${inx} of ${target.name} is undefined`,
+        );
       }
 
       if (typeof recipe === 'function') {

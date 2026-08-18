@@ -1,7 +1,7 @@
 .PHONY: dev-build dev-up dev-down dev-logs prod-build prod-up prod-down prod-logs status test
 
 dev-build:
-	docker compose build
+	docker compose build --no-cache
 
 dev-up:
 	docker compose up

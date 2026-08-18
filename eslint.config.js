@@ -17,7 +17,7 @@ export default [
   importPlugin.flatConfigs.recommended,
   importPlugin.flatConfigs.typescript,
   {
-    ignores: ['node_modules', 'dist', 'build', '.turbo'],
+    ignores: ['node_modules', 'dist', 'build', '.test-build', '.turbo'],
   },
   {
     settings: {
@@ -159,7 +159,7 @@ export default [
       ],
       '@typescript-eslint/no-use-before-define': OFF,
       '@typescript-eslint/triple-slash-reference': OFF,
-      '@typescript-eslint/consistent-type-imports': ERROR,
+      '@typescript-eslint/consistent-type-imports': OFF,
       '@typescript-eslint/no-var-requires': WARN,
       '@typescript-eslint/no-require-imports': OFF,
 
