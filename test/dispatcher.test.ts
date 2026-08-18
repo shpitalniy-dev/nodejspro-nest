@@ -140,13 +140,15 @@ test.describe('Dispatcher', () => {
       const res = await fetch(`${baseUrl}/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Al', email: 'not-an-email', age: 30 }),
+        body: JSON.stringify({ email: 'not-an-email' }),
       });
 
       const text = await res.text();
 
       assert.equal(res.status, 400);
       assert.match(text, /email/);
+      assert.match(text, /field/);
+      assert.match(text, /constraints/);
     } finally {
       await close();
     }
@@ -174,9 +176,7 @@ test.describe('Dispatcher', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: 'User',
           email: 'user@test.com',
-          age: 42,
         }),
       });
 
