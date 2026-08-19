@@ -9,7 +9,7 @@ import { getMethodHttpCode } from './decorators/http-code.ts';
 import { Inject } from './decorators/inject.ts';
 import { Injectable } from './decorators/injectable.ts';
 import { getMethodParamsMap } from './decorators/params.ts';
-import { HttpError } from './exceptions/http.exceptions.ts';
+import { HttpError, NotFoundError } from './exceptions/http.exceptions.ts';
 import { validateBody } from './pipes/validation.pipe.ts';
 import { type HttpMethod, methodParamTypes } from './types/index.ts';
 import { hasBody, parseBody } from './utils/http.ts';
@@ -34,11 +34,6 @@ export class Dispatcher {
     @Inject(Router) private router: Router,
     @Inject(Container) private container: Container,
   ) {}
-
-  private notFound(res: http.ServerResponse) {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not Found');
-  }
 
   private handleError(res: http.ServerResponse, error: unknown) {
     this.logger.error(error);
@@ -79,16 +74,14 @@ export class Dispatcher {
     req: http.IncomingMessage,
     res: http.ServerResponse,
   ) {
-    const { method, url = '' } = req;
-    const route = this.router.match(url, method as HttpMethod);
-
-    if (!route) {
-      this.notFound(res);
-
-      return;
-    }
-
     try {
+      const { method, url = '' } = req;
+      const route = this.router.match(url, method as HttpMethod);
+
+      if (!route) {
+        throw new NotFoundError();
+      }
+
       const { controller, property, params } = route;
       const query = url.split('?')[1] ?? '';
       const queryParams = new URLSearchParams(query);
