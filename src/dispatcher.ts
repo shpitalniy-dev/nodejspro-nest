@@ -56,6 +56,24 @@ export class Dispatcher {
     res.end(hasErrors ? JSON.stringify(error.errors) : message);
   }
 
+  private async parseRequestBody(
+    req: http.IncomingMessage,
+  ): Promise<Record<string, unknown> | undefined> {
+    if (hasBody(req)) {
+      try {
+        return await parseBody(req);
+      } catch (e) {
+        if (e instanceof SyntaxError) {
+          throw new HttpError(400, [{ message: 'Invalid JSON body' }]);
+        }
+
+        throw e;
+      }
+    }
+
+    return undefined;
+  }
+
   private async handleRequest(
     req: http.IncomingMessage,
     res: http.ServerResponse,
@@ -72,7 +90,7 @@ export class Dispatcher {
     try {
       const query = url.split('?')[1] ?? '';
       const queryParams = new URLSearchParams(query);
-      const body = hasBody(req) ? await parseBody(req) : undefined;
+      const body = await this.parseRequestBody(req);
 
       const args: unknown[] = [];
       const methodParams = getMethodParamsMap(route.controller, route.property);
