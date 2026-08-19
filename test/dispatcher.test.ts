@@ -8,6 +8,7 @@ import { Container } from '../src/container.ts';
 import { Config } from '../src/controllers/config/index.ts';
 import { Logger } from '../src/controllers/logger/index.ts';
 import { Controller } from '../src/decorators/controller.ts';
+import { HttpCode } from '../src/decorators/http-code.ts';
 import { Inject } from '../src/decorators/inject.ts';
 import { Injectable } from '../src/decorators/injectable.ts';
 import { Get, getControllerRoutes, Post } from '../src/decorators/methods.ts';
@@ -123,6 +124,35 @@ test.describe('Dispatcher', () => {
     }
   });
 
+  test('invalid JSON body is rejected with 400', async () => {
+    @Injectable()
+    @Controller('users')
+    class UsersController {
+      @Post()
+      createUser(@Body() user: CreateUserDto) {
+        return user;
+      }
+    }
+
+    const { dispatcher } = createTestApp([UsersController]);
+    const { baseUrl, close } = await startTestServer(dispatcher);
+
+    try {
+      const res = await fetch(`${baseUrl}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{"email": "',
+      });
+
+      const text = await res.text();
+
+      assert.equal(res.status, 400);
+      assert.match(text, /Invalid JSON body/);
+    } finally {
+      await close();
+    }
+  });
+
   test('invalid DTO body is rejected with 400 and field details', async () => {
     @Injectable()
     @Controller('users')
@@ -154,13 +184,14 @@ test.describe('Dispatcher', () => {
     }
   });
 
-  test('valid DTO body reaches the handler as a real DTO instance', async () => {
+  test('valid DTO body reaches the handler as a real DTO instance with correct response status', async () => {
     const received: unknown[] = [];
 
     @Injectable()
     @Controller('users')
     class UsersController {
       @Post()
+      @HttpCode(201)
       createUser(@Body() user: CreateUserDto) {
         received.push(user);
 
@@ -180,7 +211,7 @@ test.describe('Dispatcher', () => {
         }),
       });
 
-      assert.equal(res.status, 200);
+      assert.equal(res.status, 201);
       assert.equal(received.length, 1);
       assert.ok(received[0] instanceof CreateUserDto);
     } finally {
