@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 
 import { Controller } from '../../decorators/controller.ts';
+import { HttpCode } from '../../decorators/http-code.ts';
 import { Injectable } from '../../decorators/injectable.ts';
 import { Get, Post } from '../../decorators/methods.ts';
 import { Body, Param, Query } from '../../decorators/params.ts';
@@ -23,6 +24,7 @@ export class Users {
   }
 
   @Post()
+  @HttpCode(201)
   createUser(@Body() user: CreateUserDto) {
     return user;
   }

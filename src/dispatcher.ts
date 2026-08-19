@@ -5,6 +5,7 @@ import http from 'node:http';
 
 import { Config } from './controllers/config/index.ts';
 import { Logger } from './controllers/logger/index.ts';
+import { getMethodHttpCode } from './decorators/http-code.ts';
 import { Inject } from './decorators/inject.ts';
 import { Injectable } from './decorators/injectable.ts';
 import { getMethodParamsMap } from './decorators/params.ts';
@@ -88,18 +89,18 @@ export class Dispatcher {
     }
 
     try {
+      const { controller, property, params } = route;
       const query = url.split('?')[1] ?? '';
       const queryParams = new URLSearchParams(query);
       const body = await this.parseRequestBody(req);
 
       const args: unknown[] = [];
-      const methodParams = getMethodParamsMap(route.controller, route.property);
+      const methodParams = getMethodParamsMap(controller, property);
+      const httpCode = getMethodHttpCode(controller, property);
 
       for (const param of methodParams ?? []) {
         if (param.type === methodParamTypes.param) {
-          args[param.index] = param.name
-            ? route.params[param.name]
-            : route.params;
+          args[param.index] = param.name ? params[param.name] : params;
         }
 
         if (param.type === methodParamTypes.query) {
@@ -125,7 +126,7 @@ export class Dispatcher {
       const result = await (instance as any)[route.property](...args);
       const json = JSON.stringify(result);
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.writeHead(httpCode ?? 200, { 'Content-Type': 'application/json' });
       res.end(json);
     } catch (error) {
       this.handleError(res, error);
