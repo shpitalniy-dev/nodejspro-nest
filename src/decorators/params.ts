@@ -1,13 +1,20 @@
 import 'reflect-metadata';
 
 import { METHOD_PARAMS } from '../tokens.ts';
-import type { Ctor, MethodParamsMap, MethodParamType } from '../types/index.ts';
+import type { Ctor, MethodParams, MethodParamType } from '../types/index.ts';
 
-export const getMethodsParams = (target: Ctor) =>
-  Reflect.getMetadata(METHOD_PARAMS, target) as MethodParamsMap | undefined;
+export const getMethodsParams = (target: Ctor, propertyKey: string | symbol) =>
+  Reflect.getMetadata(METHOD_PARAMS, target, propertyKey) as
+    | MethodParams
+    | undefined;
 
-export const getOwnMethodsParams = (target: Ctor) =>
-  Reflect.getOwnMetadata(METHOD_PARAMS, target) as MethodParamsMap | undefined;
+export const getOwnMethodsParams = (
+  target: Ctor,
+  propertyKey: string | symbol,
+) =>
+  Reflect.getOwnMetadata(METHOD_PARAMS, target, propertyKey) as
+    | MethodParams
+    | undefined;
 
 const paramDecoratorFactory =
   (type: MethodParamType) =>
@@ -25,20 +32,29 @@ const paramDecoratorFactory =
       propertyKey,
     ) as Ctor[] | undefined;
 
-    const ownParams = getOwnMethodsParams(target.constructor as Ctor);
-    const inheritedParams = getMethodsParams(target.constructor as Ctor);
+    const ownParams = getOwnMethodsParams(
+      target.constructor as Ctor,
+      propertyKey,
+    );
+    const inheritedParams = getMethodsParams(
+      target.constructor as Ctor,
+      propertyKey,
+    );
 
-    const params = ownParams ?? new Map(inheritedParams ?? []);
-    const paramsForProperty = [...(params.get(propertyKey as string) || [])];
-    paramsForProperty.push({
+    const params = ownParams ?? [...(inheritedParams ?? [])];
+    params.push({
       index: parameterIndex,
       type,
       name,
       dtoClass: paramTypes?.[parameterIndex],
     });
-    params.set(propertyKey as string, paramsForProperty);
 
-    Reflect.defineMetadata(METHOD_PARAMS, params, target.constructor);
+    Reflect.defineMetadata(
+      METHOD_PARAMS,
+      params,
+      target.constructor,
+      propertyKey,
+    );
   };
 
 export const Param = paramDecoratorFactory('param');

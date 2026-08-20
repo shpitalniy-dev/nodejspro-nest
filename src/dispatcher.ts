@@ -107,8 +107,7 @@ export class Dispatcher {
       const body = await this.parseRequestBody(req);
 
       const args: unknown[] = [];
-      const methodParams = getMethodsParams(controller)?.get(property) ?? [];
-      const httpCode = getMethodHttpCode(controller, property);
+      const methodParams = getMethodsParams(controller, property) ?? [];
 
       for (const param of methodParams) {
         if (param.type === methodParamTypes.param) {
@@ -138,6 +137,7 @@ export class Dispatcher {
       const result = await (instance as any)[route.property](...args);
       const json = JSON.stringify(result);
 
+      const httpCode = getMethodHttpCode(controller, property);
       res.writeHead(httpCode ?? 200, { 'Content-Type': 'application/json' });
       res.end(json);
     } catch (error) {

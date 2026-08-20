@@ -44,7 +44,7 @@ export interface MethodParamItem {
   dtoClass?: Ctor;
 }
 
-export type MethodParamsMap = Map<string | symbol, MethodParamItem[]>;
+export type MethodParams = MethodParamItem[];
 export type MethodGuards = Ctor<Guard>[];
 
 export interface ExecutionContext {

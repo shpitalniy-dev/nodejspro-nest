@@ -260,8 +260,8 @@ test.describe('Dispatcher', () => {
       }
     }
 
-    const baseParams = getMethodsParams(Base)?.get('getOne') ?? [];
-    const childParams = getMethodsParams(Child)?.get('getOne') ?? [];
+    const baseParams = getMethodsParams(Base, 'getOne') ?? [];
+    const childParams = getMethodsParams(Child, 'getOne') ?? [];
 
     assert.equal(baseParams.length, 1);
     assert.equal(baseParams[0].name, 'id');
