@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { Controller } from '../src/decorators/controller.ts';
-import { UseGuard } from '../src/decorators/guard.ts';
+import { UseGuards } from '../src/decorators/guard.ts';
 import { Injectable } from '../src/decorators/injectable.ts';
 import { Get } from '../src/decorators/methods.ts';
 import { Param } from '../src/decorators/params.ts';
@@ -33,7 +33,7 @@ test.describe('Lifecycle', () => {
     @Controller('users')
     class UsersController {
       @Get(':id')
-      @UseGuard(AuthGuard)
+      @UseGuards(AuthGuard)
       one(@Param('id') id: string) {
         return { id };
       }
@@ -62,7 +62,7 @@ test.describe('Lifecycle', () => {
     @Controller('users')
     class UsersController {
       @Get(':id')
-      @UseGuard(AuthGuard)
+      @UseGuards(AuthGuard)
       one(@Param('id') id: string) {
         return { id };
       }

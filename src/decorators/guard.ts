@@ -17,8 +17,8 @@ export const getOwnMethodGuards = (
     | MethodGuards
     | undefined;
 
-export const UseGuard =
-  (guard: Ctor<Guard>): MethodDecorator =>
+export const UseGuards =
+  (...guards: Ctor<Guard>[]): MethodDecorator =>
   (target, propertyKey, _descriptor) => {
     const ownGuards = getOwnMethodGuards(
       target.constructor as Ctor,
@@ -29,12 +29,11 @@ export const UseGuard =
       propertyKey,
     );
 
-    const guards = ownGuards ?? [...(inheritedGuards ?? [])];
-    guards.push(guard);
+    const updated = [...(ownGuards ?? inheritedGuards ?? []), ...guards];
 
     Reflect.defineMetadata(
       METHOD_GUARDS,
-      guards,
+      updated,
       target.constructor,
       propertyKey,
     );

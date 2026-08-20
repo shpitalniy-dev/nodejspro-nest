@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 
 import { Controller } from '../../decorators/controller.ts';
-import { UseGuard } from '../../decorators/guard.ts';
+import { UseGuards } from '../../decorators/guard.ts';
 import { HttpCode } from '../../decorators/http-code.ts';
 import { Injectable } from '../../decorators/injectable.ts';
 import { Get, Post } from '../../decorators/methods.ts';
@@ -13,7 +13,7 @@ import { AuthGuard } from '../../guards/auth.guard.ts';
 @Controller('users')
 export class Users {
   @Get()
-  @UseGuard(AuthGuard)
+  @UseGuards(AuthGuard)
   getAllUsers(@Query('limit') limit: string) {
     return {
       limit,
@@ -22,14 +22,14 @@ export class Users {
   }
 
   @Get(':id')
-  @UseGuard(AuthGuard)
+  @UseGuards(AuthGuard)
   getUser(@Param('id') id: string) {
     return { id };
   }
 
   @Post()
   @HttpCode(201)
-  @UseGuard(AuthGuard)
+  @UseGuards(AuthGuard)
   createUser(@Body() user: CreateUserDto) {
     return user;
   }
