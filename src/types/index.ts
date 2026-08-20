@@ -1,3 +1,7 @@
+import { IncomingMessage } from 'http';
+
+import { Guard } from '../guards/guard.types.ts';
+
 export type NodeEnv = 'development' | 'production';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,3 +45,8 @@ export interface MethodParamItem {
 }
 
 export type MethodParamsMap = Map<string | symbol, MethodParamItem[]>;
+export type MethodGuards = Ctor<Guard>[];
+
+export interface ExecutionContext {
+  req: IncomingMessage;
+}

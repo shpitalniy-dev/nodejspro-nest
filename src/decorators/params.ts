@@ -3,16 +3,11 @@ import 'reflect-metadata';
 import { METHOD_PARAMS } from '../tokens.ts';
 import type { Ctor, MethodParamsMap, MethodParamType } from '../types/index.ts';
 
-export const getControllerMethodsParams = (target: Ctor) =>
+export const getMethodsParams = (target: Ctor) =>
   Reflect.getMetadata(METHOD_PARAMS, target) as MethodParamsMap | undefined;
 
-export const getOwnControllerMethodsParams = (target: Ctor) =>
+export const getOwnMethodsParams = (target: Ctor) =>
   Reflect.getOwnMetadata(METHOD_PARAMS, target) as MethodParamsMap | undefined;
-
-export const getMethodParamsMap = (
-  target: Ctor,
-  propertyKey: string | symbol,
-) => (getControllerMethodsParams(target) ?? new Map()).get(propertyKey) ?? [];
 
 const paramDecoratorFactory =
   (type: MethodParamType) =>
@@ -30,10 +25,8 @@ const paramDecoratorFactory =
       propertyKey,
     ) as Ctor[] | undefined;
 
-    const ownParams = getOwnControllerMethodsParams(target.constructor as Ctor);
-    const inheritedParams = getControllerMethodsParams(
-      target.constructor as Ctor,
-    );
+    const ownParams = getOwnMethodsParams(target.constructor as Ctor);
+    const inheritedParams = getMethodsParams(target.constructor as Ctor);
 
     const params = ownParams ?? new Map(inheritedParams ?? []);
     const paramsForProperty = [...(params.get(propertyKey as string) || [])];

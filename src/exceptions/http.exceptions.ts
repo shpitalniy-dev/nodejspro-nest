@@ -9,8 +9,14 @@ export class HttpError extends Error {
   }
 }
 
-export class NotFoundError extends HttpError {
-  constructor() {
-    super(404, [{ message: 'Not Found' }]);
+export class NotFoundException extends HttpError {
+  constructor(msg?: string) {
+    super(404, [{ message: msg ?? 'Not Found' }]);
+  }
+}
+
+export class ForbiddenException extends HttpError {
+  constructor(msg?: string) {
+    super(403, [{ message: msg ?? 'Forbidden' }]);
   }
 }

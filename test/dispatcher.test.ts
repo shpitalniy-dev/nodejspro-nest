@@ -13,7 +13,7 @@ import { Injectable } from '../src/decorators/injectable.ts';
 import { Get, getControllerRoutes, Post } from '../src/decorators/methods.ts';
 import {
   Body,
-  getMethodParamsMap,
+  getMethodsParams,
   Param,
   Query,
 } from '../src/decorators/params.ts';
@@ -260,8 +260,8 @@ test.describe('Dispatcher', () => {
       }
     }
 
-    const baseParams = getMethodParamsMap(Base, 'getOne');
-    const childParams = getMethodParamsMap(Child, 'getOne');
+    const baseParams = getMethodsParams(Base)?.get('getOne') ?? [];
+    const childParams = getMethodsParams(Child)?.get('getOne') ?? [];
 
     assert.equal(baseParams.length, 1);
     assert.equal(baseParams[0].name, 'id');

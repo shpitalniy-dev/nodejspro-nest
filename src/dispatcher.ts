@@ -5,11 +5,16 @@ import http from 'node:http';
 
 import { Config } from './controllers/config/index.ts';
 import { Logger } from './controllers/logger/index.ts';
+import { getMethodGuards } from './decorators/guard.ts';
 import { getMethodHttpCode } from './decorators/http-code.ts';
 import { Inject } from './decorators/inject.ts';
 import { Injectable } from './decorators/injectable.ts';
-import { getMethodParamsMap } from './decorators/params.ts';
-import { HttpError, NotFoundError } from './exceptions/http.exceptions.ts';
+import { getMethodsParams } from './decorators/params.ts';
+import {
+  ForbiddenException,
+  HttpError,
+  NotFoundException,
+} from './exceptions/http.exceptions.ts';
 import { validateBody } from './pipes/validation.pipe.ts';
 import { type HttpMethod, methodParamTypes } from './types/index.ts';
 import { hasBody, parseBody } from './utils/http.ts';
@@ -79,19 +84,33 @@ export class Dispatcher {
       const route = this.router.match(url, method as HttpMethod);
 
       if (!route) {
-        throw new NotFoundError();
+        throw new NotFoundException();
       }
 
       const { controller, property, params } = route;
+      const guards = getMethodGuards(controller, property) ?? [];
+
+      if (guards.length) {
+        for (const guard of guards) {
+          const hasPassed = await this.container
+            .get(guard)
+            .canActivate({ req });
+
+          if (!hasPassed) {
+            throw new ForbiddenException();
+          }
+        }
+      }
+
       const query = url.split('?')[1] ?? '';
       const queryParams = new URLSearchParams(query);
       const body = await this.parseRequestBody(req);
 
       const args: unknown[] = [];
-      const methodParams = getMethodParamsMap(controller, property);
+      const methodParams = getMethodsParams(controller)?.get(property) ?? [];
       const httpCode = getMethodHttpCode(controller, property);
 
-      for (const param of methodParams ?? []) {
+      for (const param of methodParams) {
         if (param.type === methodParamTypes.param) {
           args[param.index] = param.name ? params[param.name] : params;
         }
