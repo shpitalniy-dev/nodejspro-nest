@@ -3,7 +3,6 @@ import 'reflect-metadata';
 
 import http from 'node:http';
 
-import { RequestContext } from './context/request-context.ts';
 import { Config } from './controllers/config/index.ts';
 import { Logger } from './controllers/logger/index.ts';
 import { getMethodGuards } from './decorators/guard.ts';
@@ -17,7 +16,12 @@ import {
   NotFoundException,
 } from './exceptions/http.exceptions.ts';
 import { validateBody } from './pipes/validation.pipe.ts';
-import { type HttpMethod, methodParamTypes } from './types/index.ts';
+import {
+  Ctor,
+  type HttpMethod,
+  methodParamTypes,
+  Middleware,
+} from './types/index.ts';
 import { hasBody, parseBody } from './utils/http.ts';
 import { Container } from './container.ts';
 import { Router } from './router.ts';
@@ -33,14 +37,18 @@ const TRIVIAL_TYPES = new Set<unknown>([
 @Injectable()
 export class Dispatcher {
   private httpServer: http.Server | null = null;
+  private middlewares: Ctor<Middleware>[] = [];
 
   constructor(
     @Inject(Config) private config: Config,
     @Inject(Logger) private logger: Logger,
     @Inject(Router) private router: Router,
     @Inject(Container) private container: Container,
-    @Inject(RequestContext) private requestContext: RequestContext,
   ) {}
+
+  registerMiddleware(middleware: Ctor<Middleware>) {
+    this.middlewares.push(middleware);
+  }
 
   private handleError(res: http.ServerResponse, error: unknown) {
     this.logger.error(error);
@@ -82,7 +90,7 @@ export class Dispatcher {
     res: http.ServerResponse,
   ) {
     try {
-      const next = async () => {
+      const routeRequest = async () => {
         const { method, url = '' } = req;
         const route = this.router.match(url, method as HttpMethod);
 
@@ -145,7 +153,15 @@ export class Dispatcher {
         res.end(json);
       };
 
-      await this.requestContext.use(req, res, next);
+      const chain = this.middlewares.reduceRight<() => Promise<void>>(
+        (next, middlewareCtor) => async () => {
+          const middleware = this.container.get(middlewareCtor);
+          await middleware.use(req, res, next);
+        },
+        routeRequest,
+      );
+
+      await chain();
     } catch (error) {
       this.handleError(res, error);
     }

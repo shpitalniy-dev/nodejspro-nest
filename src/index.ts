@@ -33,4 +33,5 @@ router.register(Health);
 router.register(Users);
 
 const dispatcher = container.get(Dispatcher);
+dispatcher.registerMiddleware(RequestContext);
 dispatcher.bootstrap();

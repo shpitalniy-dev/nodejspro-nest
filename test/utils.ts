@@ -38,7 +38,10 @@ export const createTestApp = (controllers: Ctor[]) => {
   const router = container.get(Router);
   controllers.forEach(controller => router.register(controller));
 
-  return { container, dispatcher: container.get(Dispatcher) };
+  const dispatcher = container.get(Dispatcher);
+  dispatcher.registerMiddleware(RequestContext);
+
+  return { container, dispatcher };
 };
 
 export const startTestServer = (dispatcher: Dispatcher) =>
