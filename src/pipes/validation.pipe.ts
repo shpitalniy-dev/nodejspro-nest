@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 
-import { HttpError } from '../exceptions/http.exceptions.ts';
+import { BadRequestException } from '../filters/exception.filter.ts';
 
 export async function validateBody<T extends object>(
   dtoClass: new () => T,
@@ -14,8 +14,8 @@ export async function validateBody<T extends object>(
   });
 
   if (errors.length > 0) {
-    throw new HttpError(
-      400,
+    throw new BadRequestException(
+      'Validation failed',
       errors.map(e => ({
         field: e.property,
         constraints: e.constraints,

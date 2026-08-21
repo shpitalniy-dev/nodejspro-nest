@@ -258,4 +258,27 @@ test.describe('Lifecycle', () => {
       await close();
     }
   });
+
+  test('boom error handled correctly with global exception filter', async () => {
+    @Injectable()
+    @Controller('users')
+    class UsersController {
+      @Get(':id')
+      one() {
+        throw new Error('boom');
+      }
+    }
+
+    const { dispatcher } = createTestApp([UsersController]);
+    const { baseUrl, close } = await startTestServer(dispatcher);
+
+    try {
+      const res = await fetch(`${baseUrl}/users/1`);
+      const text = await res.text();
+      assert.equal(res.status, 500);
+      assert.doesNotMatch(text, /boom|at .*\.ts:/);
+    } finally {
+      await close();
+    }
+  });
 });

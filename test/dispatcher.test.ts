@@ -20,6 +20,7 @@ import {
 } from '../src/decorators/params.ts';
 import { Dispatcher } from '../src/dispatcher.ts';
 import { CreateUserDto } from '../src/dto/create-user.dto.ts';
+import { GlobalExceptionFilter } from '../src/filters/exception.filter.ts';
 import { Router } from '../src/router.ts';
 
 import {
@@ -130,6 +131,7 @@ test.describe('Dispatcher', () => {
       const text = await res.text();
 
       assert.equal(res.status, 400);
+      assert.match(text, /Validation failed/);
       assert.match(text, /email/);
       assert.match(text, /field/);
       assert.match(text, /constraints/);
@@ -202,6 +204,7 @@ test.describe('Dispatcher', () => {
     container.bind(Router).toSelf();
     container.bind(Dispatcher).toSelf();
     container.bind(RequestContext).toSelf();
+    container.bind(GlobalExceptionFilter).toSelf();
     container.bind(UsersService).toSelf();
     container.bind(UsersController).toSelf();
 

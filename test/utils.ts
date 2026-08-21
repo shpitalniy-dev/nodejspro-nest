@@ -7,6 +7,7 @@ import { RequestContext } from '../src/context/request-context.ts';
 import { Config } from '../src/controllers/config/index.ts';
 import { Logger } from '../src/controllers/logger/index.ts';
 import { Dispatcher } from '../src/dispatcher.ts';
+import { GlobalExceptionFilter } from '../src/filters/exception.filter.ts';
 import { AuthGuard } from '../src/guards/auth.guard.ts';
 import { LoggingInterceptor } from '../src/interceptors/logging.interceptor.ts';
 import { Router } from '../src/router.ts';
@@ -32,6 +33,7 @@ export const createTestApp = (controllers: Ctor[]) => {
   container.bind(RequestContext).toSelf();
   container.bind(AuthGuard).toSelf();
   container.bind(LoggingInterceptor).toSelf();
+  container.bind(GlobalExceptionFilter).toSelf();
   container.bind(Router).toSelf();
   container.bind(Dispatcher).toSelf();
 

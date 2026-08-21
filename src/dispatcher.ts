@@ -13,9 +13,10 @@ import { getMethodInterceptors } from './decorators/interceptor.ts';
 import { getMethodsParams } from './decorators/params.ts';
 import {
   ForbiddenException,
-  HttpError,
+  GlobalExceptionFilter,
+  HttpException,
   NotFoundException,
-} from './exceptions/http.exceptions.ts';
+} from './filters/exception.filter.ts';
 import { validateBody } from './pipes/validation.pipe.ts';
 import {
   Ctor,
@@ -45,27 +46,12 @@ export class Dispatcher {
     @Inject(Logger) private logger: Logger,
     @Inject(Router) private router: Router,
     @Inject(Container) private container: Container,
+    @Inject(GlobalExceptionFilter)
+    private exceptionFilter: GlobalExceptionFilter,
   ) {}
 
   registerMiddleware(middleware: Ctor<Middleware>) {
     this.middlewares.push(middleware);
-  }
-
-  private handleError(res: http.ServerResponse, error: unknown) {
-    this.logger.error(error);
-
-    const isHttpError = error instanceof HttpError;
-    const statusCode = isHttpError ? error.statusCode : 500;
-    const message = this.config.isProduction
-      ? 'Internal Server Error'
-      : (error as Error).message;
-
-    const hasErrors =
-      isHttpError && Array.isArray(error.errors) && error.errors.length > 0;
-    const contentType = hasErrors ? 'application/json' : 'text/plain';
-
-    res.writeHead(statusCode, { 'Content-Type': contentType });
-    res.end(hasErrors ? JSON.stringify(error.errors) : message);
   }
 
   private async parseRequestBody(
@@ -76,7 +62,7 @@ export class Dispatcher {
         return await parseBody(req);
       } catch (e) {
         if (e instanceof SyntaxError) {
-          throw new HttpError(400, [{ message: 'Invalid JSON body' }]);
+          throw new HttpException(400, 'Invalid JSON body');
         }
 
         throw e;
@@ -94,7 +80,7 @@ export class Dispatcher {
 
       await chain();
     } catch (error) {
-      this.handleError(res, error);
+      this.exceptionFilter.catch(error, { req, res });
     }
   }
 
@@ -123,21 +109,27 @@ export class Dispatcher {
       throw new NotFoundException();
     }
 
-    await this.runGuards(route, req);
+    await this.runGuards(route, req, res);
 
-    const chain = this.buildInterceptorChain(route, req, () =>
+    const chain = this.buildInterceptorChain(route, req, res, () =>
       this.invokeHandler(route, req, res),
     );
 
     await chain();
   }
 
-  private async runGuards(route: MatchedRouteItem, req: http.IncomingMessage) {
+  private async runGuards(
+    route: MatchedRouteItem,
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ) {
     const { controller, property } = route;
     const guards = getMethodGuards(controller, property) ?? [];
 
     for (const guard of guards) {
-      const hasPassed = await this.container.get(guard).canActivate({ req });
+      const hasPassed = await this.container
+        .get(guard)
+        .canActivate({ req, res });
 
       if (!hasPassed) {
         throw new ForbiddenException();
@@ -148,6 +140,7 @@ export class Dispatcher {
   private buildInterceptorChain(
     route: MatchedRouteItem,
     req: http.IncomingMessage,
+    res: http.ServerResponse,
     next: () => Promise<void>,
   ): () => Promise<void> {
     const { controller, property } = route;
@@ -156,7 +149,7 @@ export class Dispatcher {
     return interceptors.reduceRight<() => Promise<void>>(
       (next, interceptorCtor) => async () => {
         const interceptor = this.container.get(interceptorCtor);
-        await interceptor.intercept({ req }, next);
+        await interceptor.intercept({ req, res }, next);
       },
       next,
     );

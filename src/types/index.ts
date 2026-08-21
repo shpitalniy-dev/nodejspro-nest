@@ -48,6 +48,7 @@ export type MethodInterceptors = Ctor<Interceptor>[];
 
 export interface ExecutionContext {
   req: IncomingMessage;
+  res: ServerResponse;
 }
 export interface Guard {
   canActivate(ctx: ExecutionContext): Promise<boolean>;
@@ -63,4 +64,8 @@ export interface Middleware {
 
 export interface Interceptor {
   intercept(ctx: ExecutionContext, next: () => Promise<void>): Promise<void>;
+}
+
+export interface ExceptionFilter {
+  catch(exception: unknown, ctx: ExecutionContext): void;
 }
