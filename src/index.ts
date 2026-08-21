@@ -1,10 +1,12 @@
 import 'reflect-metadata';
 
+import { RequestContext } from './context/request-context.ts';
 import { Config } from './controllers/config/index.ts';
 import { Health } from './controllers/health/index.ts';
 import { Logger } from './controllers/logger/index.ts';
 import { Users } from './controllers/users/index.ts';
 import { AuthGuard } from './guards/auth.guard.ts';
+import { UserService } from './services/user.service.ts';
 import { Container } from './container.ts';
 import { Dispatcher } from './dispatcher.ts';
 import { Router } from './router.ts';
@@ -20,7 +22,9 @@ container.bind(Config).toSelf();
 container.bind(Logger).toSelf();
 container.bind(Health).toSelf();
 container.bind(Users).toSelf();
+container.bind(UserService).toSelf();
 container.bind(AuthGuard).toSelf();
+container.bind(RequestContext).toSelf();
 container.bind(Router).toSelf();
 container.bind(Dispatcher).toSelf();
 

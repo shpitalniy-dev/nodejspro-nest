@@ -3,8 +3,7 @@ import 'reflect-metadata';
 import http from 'node:http';
 
 import { Injectable } from '../decorators/injectable.ts';
-
-import type { Guard } from './guard.types.ts';
+import { Guard } from '../types/index.ts';
 
 @Injectable()
 export class AuthGuard implements Guard {

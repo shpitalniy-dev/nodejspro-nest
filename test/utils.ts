@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import type http from 'node:http';
 
 import { Container } from '../src/container.ts';
+import { RequestContext } from '../src/context/request-context.ts';
 import { Config } from '../src/controllers/config/index.ts';
 import { Logger } from '../src/controllers/logger/index.ts';
 import { Dispatcher } from '../src/dispatcher.ts';
@@ -26,6 +27,7 @@ export const createTestApp = (controllers: Ctor[]) => {
   container.bind(Container).to(container);
   container.bind(Config).to(stubConfig);
   container.bind(Logger).to(stubLogger);
+  container.bind(RequestContext).toSelf();
   container.bind(Router).toSelf();
   container.bind(Dispatcher).toSelf();
 

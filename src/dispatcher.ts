@@ -3,6 +3,7 @@ import 'reflect-metadata';
 
 import http from 'node:http';
 
+import { RequestContext } from './context/request-context.ts';
 import { Config } from './controllers/config/index.ts';
 import { Logger } from './controllers/logger/index.ts';
 import { getMethodGuards } from './decorators/guard.ts';
@@ -38,6 +39,7 @@ export class Dispatcher {
     @Inject(Logger) private logger: Logger,
     @Inject(Router) private router: Router,
     @Inject(Container) private container: Container,
+    @Inject(RequestContext) private requestContext: RequestContext,
   ) {}
 
   private handleError(res: http.ServerResponse, error: unknown) {
@@ -80,66 +82,70 @@ export class Dispatcher {
     res: http.ServerResponse,
   ) {
     try {
-      const { method, url = '' } = req;
-      const route = this.router.match(url, method as HttpMethod);
+      const next = async () => {
+        const { method, url = '' } = req;
+        const route = this.router.match(url, method as HttpMethod);
 
-      if (!route) {
-        throw new NotFoundException();
-      }
+        if (!route) {
+          throw new NotFoundException();
+        }
 
-      const { controller, property, params } = route;
-      const guards = getMethodGuards(controller, property) ?? [];
+        const { controller, property, params } = route;
+        const guards = getMethodGuards(controller, property) ?? [];
 
-      if (guards.length) {
-        for (const guard of guards) {
-          const hasPassed = await this.container
-            .get(guard)
-            .canActivate({ req });
+        if (guards.length) {
+          for (const guard of guards) {
+            const hasPassed = await this.container
+              .get(guard)
+              .canActivate({ req });
 
-          if (!hasPassed) {
-            throw new ForbiddenException();
+            if (!hasPassed) {
+              throw new ForbiddenException();
+            }
           }
         }
-      }
 
-      const query = url.split('?')[1] ?? '';
-      const queryParams = new URLSearchParams(query);
-      const body = await this.parseRequestBody(req);
+        const query = url.split('?')[1] ?? '';
+        const queryParams = new URLSearchParams(query);
+        const body = await this.parseRequestBody(req);
 
-      const args: unknown[] = [];
-      const methodParams = getMethodsParams(controller, property) ?? [];
+        const args: unknown[] = [];
+        const methodParams = getMethodsParams(controller, property) ?? [];
 
-      for (const param of methodParams) {
-        if (param.type === methodParamTypes.param) {
-          args[param.index] = param.name ? params[param.name] : params;
+        for (const param of methodParams) {
+          if (param.type === methodParamTypes.param) {
+            args[param.index] = param.name ? params[param.name] : params;
+          }
+
+          if (param.type === methodParamTypes.query) {
+            args[param.index] = param.name
+              ? (queryParams.get(param.name) ?? undefined)
+              : Object.fromEntries(queryParams);
+          }
+
+          if (param.type === methodParamTypes.body) {
+            const value = param.name ? body?.[param.name] : body;
+            const dtoClass =
+              param.dtoClass && !TRIVIAL_TYPES.has(param.dtoClass)
+                ? param.dtoClass
+                : undefined;
+
+            args[param.index] = dtoClass
+              ? await validateBody(dtoClass, value)
+              : value;
+          }
         }
 
-        if (param.type === methodParamTypes.query) {
-          args[param.index] = param.name
-            ? (queryParams.get(param.name) ?? undefined)
-            : Object.fromEntries(queryParams);
-        }
+        const instance = this.container.get(route.controller);
+        const result = await (instance as any)[route.property](...args);
+        const json = JSON.stringify(result);
 
-        if (param.type === methodParamTypes.body) {
-          const value = param.name ? body?.[param.name] : body;
-          const dtoClass =
-            param.dtoClass && !TRIVIAL_TYPES.has(param.dtoClass)
-              ? param.dtoClass
-              : undefined;
+        const httpCode = getMethodHttpCode(controller, property);
+        res.writeHead(httpCode ?? 200, { 'Content-Type': 'application/json' });
+        res.end(json);
+      };
 
-          args[param.index] = dtoClass
-            ? await validateBody(dtoClass, value)
-            : value;
-        }
-      }
-
-      const instance = this.container.get(route.controller);
-      const result = await (instance as any)[route.property](...args);
-      const json = JSON.stringify(result);
-
-      const httpCode = getMethodHttpCode(controller, property);
-      res.writeHead(httpCode ?? 200, { 'Content-Type': 'application/json' });
-      res.end(json);
+      await this.requestContext.use(req, res, next);
     } catch (error) {
       this.handleError(res, error);
     }

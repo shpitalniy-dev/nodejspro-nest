@@ -1,8 +1,7 @@
 import 'reflect-metadata';
 
-import { Guard } from '../guards/guard.types.ts';
 import { METHOD_GUARDS } from '../tokens.ts';
-import { Ctor, MethodGuards } from '../types/index.ts';
+import { Ctor, Guard, MethodGuards } from '../types/index.ts';
 
 export const getMethodGuards = (target: Ctor, propertyKey: string | symbol) =>
   Reflect.getMetadata(METHOD_GUARDS, target, propertyKey) as

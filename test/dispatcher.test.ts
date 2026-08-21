@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { Container } from '../src/container.ts';
+import { RequestContext } from '../src/context/request-context.ts';
 import { Config } from '../src/controllers/config/index.ts';
 import { Logger } from '../src/controllers/logger/index.ts';
 import { Controller } from '../src/decorators/controller.ts';
@@ -200,6 +201,7 @@ test.describe('Dispatcher', () => {
     container.bind(Logger).to(stubLogger);
     container.bind(Router).toSelf();
     container.bind(Dispatcher).toSelf();
+    container.bind(RequestContext).toSelf();
     container.bind(UsersService).toSelf();
     container.bind(UsersController).toSelf();
 

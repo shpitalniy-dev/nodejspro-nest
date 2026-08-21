@@ -1,6 +1,4 @@
-import { IncomingMessage } from 'http';
-
-import { Guard } from '../guards/guard.types.ts';
+import { IncomingMessage, ServerResponse } from 'node:http';
 
 export type NodeEnv = 'development' | 'production';
 
@@ -49,4 +47,15 @@ export type MethodGuards = Ctor<Guard>[];
 
 export interface ExecutionContext {
   req: IncomingMessage;
+}
+export interface Guard {
+  canActivate(ctx: ExecutionContext): Promise<boolean>;
+}
+
+export interface Middleware {
+  use(
+    req: IncomingMessage,
+    res: ServerResponse,
+    next: () => Promise<void>,
+  ): Promise<void>;
 }
