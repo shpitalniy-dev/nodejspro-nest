@@ -145,7 +145,7 @@ test.describe('Lifecycle', () => {
         return { id };
       }
 
-      @Get('/delay/:id')
+      @Get(':id/delay')
       oneWithDelay(@Param('id') id: string) {
         return new Promise(resolve => {
           setTimeout(() => resolve({ id }), 1000);
@@ -157,31 +157,22 @@ test.describe('Lifecycle', () => {
     const { baseUrl, close } = await startTestServer(dispatcher);
 
     try {
-      const firstRequestId = 'first-request-id';
-      const secondRequestId = 'second-request-id';
+      const requestPromises = new Array(10).fill(null).map((_, i) =>
+        fetch(`${baseUrl}/users/${i + 1}${i === 0 ? '/delay' : ''}`, {
+          headers: {
+            'x-request-id': `${i + 1}`,
+          },
+        }),
+      );
 
-      const firstRequestPromise = fetch(`${baseUrl}/users/delay/1`, {
-        headers: {
-          'x-request-id': firstRequestId,
-        },
-      });
+      const resolvedPromises = await Promise.all(requestPromises);
 
-      const secondRequestPromise = fetch(`${baseUrl}/users/2`, {
-        headers: {
-          'x-request-id': secondRequestId,
-        },
-      });
-
-      const [firstResponse, secondResponse] = await Promise.all([
-        firstRequestPromise,
-        secondRequestPromise,
-      ]);
-
-      assert.equal(firstResponse.status, 200);
-      assert.equal(firstResponse.headers.get('x-request-id'), firstRequestId);
-
-      assert.equal(secondResponse.status, 200);
-      assert.equal(secondResponse.headers.get('x-request-id'), secondRequestId);
+      assert.ok(resolvedPromises.every(r => r.status === 200));
+      assert.ok(
+        resolvedPromises.every(
+          (r, i) => r.headers.get('x-request-id') === `${i + 1}`,
+        ),
+      );
     } finally {
       await close();
     }
