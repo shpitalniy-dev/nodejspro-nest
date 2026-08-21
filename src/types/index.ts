@@ -44,6 +44,7 @@ export interface MethodParamItem {
 
 export type MethodParams = MethodParamItem[];
 export type MethodGuards = Ctor<Guard>[];
+export type MethodInterceptors = Ctor<Interceptor>[];
 
 export interface ExecutionContext {
   req: IncomingMessage;
@@ -58,4 +59,8 @@ export interface Middleware {
     res: ServerResponse,
     next: () => Promise<void>,
   ): Promise<void>;
+}
+
+export interface Interceptor {
+  intercept(ctx: ExecutionContext, next: () => Promise<void>): Promise<void>;
 }

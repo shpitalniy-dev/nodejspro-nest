@@ -5,10 +5,12 @@ import { UseGuards } from '../../decorators/guard.ts';
 import { HttpCode } from '../../decorators/http-code.ts';
 import { Inject } from '../../decorators/inject.ts';
 import { Injectable } from '../../decorators/injectable.ts';
+import { UseInterceptors } from '../../decorators/interceptor.ts';
 import { Get, Post } from '../../decorators/methods.ts';
 import { Body, Param, Query } from '../../decorators/params.ts';
 import { CreateUserDto } from '../../dto/create-user.dto.ts';
 import { AuthGuard } from '../../guards/auth.guard.ts';
+import { LoggingInterceptor } from '../../interceptors/logging.interceptor.ts';
 import { UserService } from '../../services/user.service.ts';
 
 @Injectable()
@@ -27,6 +29,7 @@ export class Users {
 
   @Get(':id')
   @UseGuards(AuthGuard)
+  @UseInterceptors(LoggingInterceptor)
   getUser(@Param('id') id: string) {
     return this.userService.getUserById(id);
   }

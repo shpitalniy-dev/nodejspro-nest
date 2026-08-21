@@ -7,6 +7,8 @@ import { RequestContext } from '../src/context/request-context.ts';
 import { Config } from '../src/controllers/config/index.ts';
 import { Logger } from '../src/controllers/logger/index.ts';
 import { Dispatcher } from '../src/dispatcher.ts';
+import { AuthGuard } from '../src/guards/auth.guard.ts';
+import { LoggingInterceptor } from '../src/interceptors/logging.interceptor.ts';
 import { Router } from '../src/router.ts';
 import type { Ctor } from '../src/types/index.ts';
 
@@ -28,6 +30,8 @@ export const createTestApp = (controllers: Ctor[]) => {
   container.bind(Config).to(stubConfig);
   container.bind(Logger).to(stubLogger);
   container.bind(RequestContext).toSelf();
+  container.bind(AuthGuard).toSelf();
+  container.bind(LoggingInterceptor).toSelf();
   container.bind(Router).toSelf();
   container.bind(Dispatcher).toSelf();
 
@@ -41,7 +45,7 @@ export const createTestApp = (controllers: Ctor[]) => {
   const dispatcher = container.get(Dispatcher);
   dispatcher.registerMiddleware(RequestContext);
 
-  return { container, dispatcher };
+  return { container, router, dispatcher };
 };
 
 export const startTestServer = (dispatcher: Dispatcher) =>

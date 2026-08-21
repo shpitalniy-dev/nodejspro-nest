@@ -6,6 +6,7 @@ import { Health } from './controllers/health/index.ts';
 import { Logger } from './controllers/logger/index.ts';
 import { Users } from './controllers/users/index.ts';
 import { AuthGuard } from './guards/auth.guard.ts';
+import { LoggingInterceptor } from './interceptors/logging.interceptor.ts';
 import { UserService } from './services/user.service.ts';
 import { Container } from './container.ts';
 import { Dispatcher } from './dispatcher.ts';
@@ -25,6 +26,7 @@ container.bind(Users).toSelf();
 container.bind(UserService).toSelf();
 container.bind(AuthGuard).toSelf();
 container.bind(RequestContext).toSelf();
+container.bind(LoggingInterceptor).toSelf();
 container.bind(Router).toSelf();
 container.bind(Dispatcher).toSelf();
 

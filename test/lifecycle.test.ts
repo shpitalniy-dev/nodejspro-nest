@@ -4,13 +4,16 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { RequestContext } from '../src/context/request-context.ts';
+import { Logger } from '../src/controllers/logger/index.ts';
 import { Controller } from '../src/decorators/controller.ts';
 import { UseGuards } from '../src/decorators/guard.ts';
 import { Inject } from '../src/decorators/inject.ts';
 import { Injectable } from '../src/decorators/injectable.ts';
+import { UseInterceptors } from '../src/decorators/interceptor.ts';
 import { Get } from '../src/decorators/methods.ts';
 import { Param } from '../src/decorators/params.ts';
 import { AuthGuard } from '../src/guards/auth.guard.ts';
+import { LoggingInterceptor } from '../src/interceptors/logging.interceptor.ts';
 
 import { createTestApp, startTestServer } from './utils.ts';
 
@@ -41,7 +44,7 @@ test.describe('Lifecycle', () => {
       }
     }
 
-    const { dispatcher } = createTestApp([UsersController, AuthGuard]);
+    const { dispatcher } = createTestApp([UsersController]);
     const { baseUrl, close } = await startTestServer(dispatcher);
 
     try {
@@ -70,7 +73,7 @@ test.describe('Lifecycle', () => {
       }
     }
 
-    const { dispatcher } = createTestApp([UsersController, AuthGuard]);
+    const { dispatcher } = createTestApp([UsersController]);
     const { baseUrl, close } = await startTestServer(dispatcher);
 
     try {
@@ -222,6 +225,35 @@ test.describe('Lifecycle', () => {
       assert.equal(res.status, 200);
       assert.equal(res.headers.get('x-request-id'), clientRequestId);
       assert.equal(body.requestId, clientRequestId);
+    } finally {
+      await close();
+    }
+  });
+
+  test('logging interceptor measures time of requests with correct output', async () => {
+    const logs: string[] = [];
+
+    @Injectable()
+    @Controller('users')
+    class UsersController {
+      @Get(':id')
+      @UseInterceptors(LoggingInterceptor)
+      one(@Param('id') id: string) {
+        return { id };
+      }
+    }
+
+    const { dispatcher, container } = createTestApp([UsersController]);
+    container
+      .bind(Logger)
+      .to({ info: (msg: string) => logs.push(msg), error: () => {} });
+
+    const { baseUrl, close } = await startTestServer(dispatcher);
+
+    try {
+      const res = await fetch(`${baseUrl}/users/1`);
+      assert.equal(res.status, 200);
+      assert.match(logs[0], /\[.+\] GET \/users\/1 - [0-9]+(\.[0-9]+)? ?ms/);
     } finally {
       await close();
     }
