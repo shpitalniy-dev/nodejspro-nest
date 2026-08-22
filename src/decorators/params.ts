@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 
 import { METHOD_PARAMS } from '../tokens.ts';
-import type { Ctor, MethodParams, MethodParamType } from '../types/index.ts';
+import type { Ctor, MethodParam, MethodParamType } from '../types/index.ts';
 
 export const getMethodsParams = (target: Ctor, propertyKey: string | symbol) =>
   Reflect.getMetadata(METHOD_PARAMS, target, propertyKey) as
-    | MethodParams
+    | MethodParam[]
     | undefined;
 
 export const getOwnMethodsParams = (
@@ -13,7 +13,7 @@ export const getOwnMethodsParams = (
   propertyKey: string | symbol,
 ) =>
   Reflect.getOwnMetadata(METHOD_PARAMS, target, propertyKey) as
-    | MethodParams
+    | MethodParam[]
     | undefined;
 
 const paramDecoratorFactory =

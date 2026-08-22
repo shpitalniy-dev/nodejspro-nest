@@ -1,23 +1,23 @@
 import 'reflect-metadata';
 
 import { METHOD_INTERCEPTORS } from '../tokens.ts';
-import { Ctor, MethodInterceptors } from '../types/index.ts';
+import { Ctor, MethodInterceptor } from '../types/index.ts';
 
 export const getMethodInterceptors = (
   target: Ctor,
   propertyKey: string | symbol,
 ) =>
   Reflect.getMetadata(METHOD_INTERCEPTORS, target, propertyKey) as
-    | MethodInterceptors
+    | MethodInterceptor[]
     | undefined;
 
 const getOwnMethodInterceptors = (target: Ctor, propertyKey: string | symbol) =>
   Reflect.getOwnMetadata(METHOD_INTERCEPTORS, target, propertyKey) as
-    | MethodInterceptors
+    | MethodInterceptor[]
     | undefined;
 
 export const UseInterceptors =
-  (...interceptors: MethodInterceptors): MethodDecorator =>
+  (...interceptors: MethodInterceptor[]): MethodDecorator =>
   (target, propertyKey, _descriptor) => {
     const ownInterceptors = getOwnMethodInterceptors(
       target.constructor as Ctor,

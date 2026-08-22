@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 
 import { METHOD_GUARDS } from '../tokens.ts';
-import { Ctor, MethodGuards } from '../types/index.ts';
+import { Ctor, MethodGuard } from '../types/index.ts';
 
 export const getMethodGuards = (target: Ctor, propertyKey: string | symbol) =>
   Reflect.getMetadata(METHOD_GUARDS, target, propertyKey) as
-    | MethodGuards
+    | MethodGuard[]
     | undefined;
 
 export const getOwnMethodGuards = (
@@ -13,11 +13,11 @@ export const getOwnMethodGuards = (
   propertyKey: string | symbol,
 ) =>
   Reflect.getOwnMetadata(METHOD_GUARDS, target, propertyKey) as
-    | MethodGuards
+    | MethodGuard[]
     | undefined;
 
 export const UseGuards =
-  (...guards: MethodGuards): MethodDecorator =>
+  (...guards: MethodGuard[]): MethodDecorator =>
   (target, propertyKey, _descriptor) => {
     const ownGuards = getOwnMethodGuards(
       target.constructor as Ctor,

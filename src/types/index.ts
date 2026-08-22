@@ -35,16 +35,15 @@ export const methodParamTypes = {
 export type MethodParamType =
   (typeof methodParamTypes)[keyof typeof methodParamTypes];
 
-export interface MethodParamItem {
+export interface MethodParam {
   index: number;
   type: MethodParamType;
   name?: string;
   dtoClass?: Ctor;
 }
 
-export type MethodParams = MethodParamItem[];
-export type MethodGuards = Ctor<Guard>[];
-export type MethodInterceptors = Ctor<Interceptor>[];
+export type MethodGuard = Ctor<Guard>;
+export type MethodInterceptor = Ctor<Interceptor>;
 
 export interface ExecutionContext {
   req: IncomingMessage;

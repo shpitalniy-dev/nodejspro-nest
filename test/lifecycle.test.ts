@@ -14,6 +14,7 @@ import { Get } from '../src/decorators/methods.ts';
 import { Param } from '../src/decorators/params.ts';
 import { AuthGuard } from '../src/guards/auth.guard.ts';
 import { LoggingInterceptor } from '../src/interceptors/logging.interceptor.ts';
+import { Interceptor } from '../src/types/index.ts';
 
 import { createTestApp, startTestServer } from './utils.ts';
 
@@ -33,7 +34,7 @@ test.describe('Lifecycle', () => {
     }
   });
 
-  test('request with authorization header responds with 200 OK', async () => {
+  test('request with authorization header responds with 200', async () => {
     @Injectable()
     @Controller('users')
     class UsersController {
@@ -62,18 +63,31 @@ test.describe('Lifecycle', () => {
     }
   });
 
-  test('request without authorization header responds with 403 Forbidden', async () => {
+  test('request without authorization header responds with 403 and stop request', async () => {
+    let handlerCalls = 0;
+
+    @Injectable()
+    class CustomInterceptor implements Interceptor {
+      async intercept(context: unknown, next: () => Promise<void>) {
+        handlerCalls++;
+        await next();
+      }
+    }
+
     @Injectable()
     @Controller('users')
     class UsersController {
       @Get(':id')
       @UseGuards(AuthGuard)
+      @UseInterceptors(CustomInterceptor)
       one(@Param('id') id: string) {
+        handlerCalls++;
+
         return { id };
       }
     }
 
-    const { dispatcher } = createTestApp([UsersController]);
+    const { dispatcher } = createTestApp([UsersController, CustomInterceptor]);
     const { baseUrl, close } = await startTestServer(dispatcher);
 
     try {
@@ -82,6 +96,7 @@ test.describe('Lifecycle', () => {
 
       assert.equal(res.status, 403);
       assert.match(text, /Forbidden/);
+      assert.equal(handlerCalls, 0);
     } finally {
       await close();
     }
