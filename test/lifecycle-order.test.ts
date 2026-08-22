@@ -2,8 +2,11 @@ import 'reflect-metadata';
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { z } from 'zod';
 
+import { Container } from '../src/container.ts';
 import { RequestContext } from '../src/context/request-context.ts';
+import { Config } from '../src/controllers/config/index.ts';
 import { Logger } from '../src/controllers/logger/index.ts';
 import { Controller } from '../src/decorators/controller.ts';
 import { UseGuards } from '../src/decorators/guard.ts';
@@ -12,11 +15,20 @@ import { Injectable } from '../src/decorators/injectable.ts';
 import { UseInterceptors } from '../src/decorators/interceptor.ts';
 import { Get } from '../src/decorators/methods.ts';
 import { Param } from '../src/decorators/params.ts';
+import { Dispatcher } from '../src/dispatcher.ts';
+import { GlobalExceptionFilter } from '../src/filters/exception.filter.ts';
 import { AuthGuard } from '../src/guards/auth.guard.ts';
 import { LoggingInterceptor } from '../src/interceptors/logging.interceptor.ts';
-import { Interceptor } from '../src/types/index.ts';
+import { GlobalZodValidationPipe } from '../src/pipes/zod-validation.pipe.ts';
+import { Router } from '../src/router.ts';
+import { Guard, Interceptor, Middleware } from '../src/types/index.ts';
 
-import { createTestApp, startTestServer } from './utils.ts';
+import {
+  createTestApp,
+  startTestServer,
+  stubConfig,
+  stubLogger,
+} from './utils.ts';
 
 test.describe('Lifecycle', () => {
   test('non existent route responds with 404 Not Found', async () => {
@@ -283,6 +295,124 @@ test.describe('Lifecycle', () => {
       const text = await res.text();
       assert.equal(res.status, 500);
       assert.doesNotMatch(text, /boom|at .*\.ts:/);
+    } finally {
+      await close();
+    }
+  });
+
+  test('validation pipe works correctly with zod schema', async () => {
+    @Injectable()
+    @Controller('users')
+    class UsersController {
+      @Get(':id')
+      one(@Param(z.coerce.number(), 'id') id: number) {
+        return { id };
+      }
+    }
+
+    const { dispatcher } = createTestApp([UsersController]);
+    const { baseUrl, close } = await startTestServer(dispatcher);
+
+    try {
+      const res = await fetch(`${baseUrl}/users/invalid-number`);
+      const text = await res.text();
+
+      assert.equal(res.status, 400);
+      assert.match(text, /Validation failed/);
+      assert.match(text, /id/);
+      assert.match(text, /field/);
+      assert.match(text, /constraints/);
+    } finally {
+      await close();
+    }
+  });
+
+  test('all lifecycle hooks are called in the correct order', async () => {
+    const lifecycleCalls: string[] = [];
+
+    @Injectable()
+    class TestMiddleware implements Middleware {
+      async use(req: unknown, res: unknown, next: () => Promise<void>) {
+        lifecycleCalls.push('middleware');
+        await next();
+      }
+    }
+
+    @Injectable()
+    class TestInterceptor implements Interceptor {
+      async intercept(ctx: unknown, next: () => Promise<void>) {
+        lifecycleCalls.push('interceptor:before');
+        await next();
+        lifecycleCalls.push('interceptor:after');
+      }
+    }
+
+    @Injectable()
+    class TestGuard implements Guard {
+      async canActivate() {
+        lifecycleCalls.push('guard');
+
+        return true;
+      }
+    }
+
+    @Injectable()
+    @Controller('test')
+    class TestController {
+      @Get(':id')
+      @UseGuards(TestGuard)
+      @UseInterceptors(TestInterceptor)
+      one(@Param(z.coerce.number(), 'id') id: number) {
+        lifecycleCalls.push('handler');
+
+        return { id };
+      }
+    }
+
+    @Injectable()
+    class TestValidationPipe {
+      transform(_schema: z.ZodType, value: unknown) {
+        lifecycleCalls.push('pipe');
+
+        return value;
+      }
+    }
+
+    const container = new Container();
+
+    container.bind(Container).to(container);
+    container.bind(Config).to(stubConfig);
+    container.bind(Logger).to(stubLogger);
+    container.bind(Router).toSelf();
+    container.bind(Dispatcher).toSelf();
+    container.bind(GlobalExceptionFilter).toSelf();
+
+    container.bind(TestMiddleware).toSelf();
+    container.bind(TestGuard).toSelf();
+    container.bind(TestInterceptor).toSelf();
+    container.bind(TestValidationPipe).toSelf();
+    container.bind(GlobalZodValidationPipe).to(TestValidationPipe);
+    container.bind(TestController).toSelf();
+
+    const router = container.get(Router);
+    router.register(TestController);
+
+    const dispatcher = container.get(Dispatcher);
+    dispatcher.registerMiddleware(TestMiddleware);
+
+    const { baseUrl, close } = await startTestServer(dispatcher);
+
+    try {
+      await fetch(`${baseUrl}/test/1`);
+
+      assert.deepEqual(lifecycleCalls, [
+        'middleware',
+        'guard',
+        'interceptor:before',
+        'pipe',
+        'handler',
+        'interceptor:after',
+      ]);
     } finally {
       await close();
     }
