@@ -20,7 +20,7 @@ export class RequestContext implements Middleware {
     res: ServerResponse,
     next: () => Promise<void>,
   ): Promise<void> {
-    const requestId = (req.headers['x-request-id'] as string) ?? randomUUID();
+    const requestId = (req.headers['x-request-id'] as string) || randomUUID();
     res.setHeader('x-request-id', requestId);
     await this.als.run({ requestId }, next);
   }

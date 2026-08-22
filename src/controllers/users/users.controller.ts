@@ -26,6 +26,7 @@ export class Users {
 
   @Get()
   @UseGuards(AuthGuard)
+  @UseInterceptors(LoggingInterceptor)
   getAllUsers(@Query(LimitQuerySchema, 'limit') limit: number) {
     return {
       limit,
@@ -43,6 +44,7 @@ export class Users {
   @Post()
   @HttpCode(201)
   @UseGuards(AuthGuard)
+  @UseInterceptors(LoggingInterceptor)
   createUser(@Body(CreateUserSchema) user: CreateUserInput) {
     return user;
   }
