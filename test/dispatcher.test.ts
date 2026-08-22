@@ -1,78 +1,36 @@
 import 'reflect-metadata';
 
 import assert from 'node:assert/strict';
-import type http from 'node:http';
 import { test } from 'node:test';
 
 import { Container } from '../src/container.ts';
+import { RequestContext } from '../src/context/request-context.ts';
 import { Config } from '../src/controllers/config/index.ts';
 import { Logger } from '../src/controllers/logger/index.ts';
+import type { CreateUserInput } from '../src/controllers/users/users.schemas.ts';
+import { CreateUserSchema } from '../src/controllers/users/users.schemas.ts';
 import { Controller } from '../src/decorators/controller.ts';
+import { HttpCode } from '../src/decorators/http-code.ts';
 import { Inject } from '../src/decorators/inject.ts';
 import { Injectable } from '../src/decorators/injectable.ts';
 import { Get, getControllerRoutes, Post } from '../src/decorators/methods.ts';
 import {
   Body,
-  getMethodParamsMap,
+  getMethodsParams,
   Param,
   Query,
 } from '../src/decorators/params.ts';
 import { Dispatcher } from '../src/dispatcher.ts';
-import { CreateUserDto } from '../src/dto/create-user.dto.ts';
+import { GlobalExceptionFilter } from '../src/filters/exception.filter.ts';
+import { GlobalZodValidationPipe } from '../src/pipes/zod-validation.pipe.ts';
 import { Router } from '../src/router.ts';
-import type { Ctor } from '../src/types/index.ts';
 
-const stubConfig = {
-  port: 0,
-  env: 'development',
-  isProduction: false,
-} as Config;
-
-const stubLogger = { info: () => {}, error: () => {} } as unknown as Logger;
-
-const createTestApp = (controllers: Ctor[]) => {
-  const container = new Container();
-
-  container.bind(Container).to(container);
-  container.bind(Config).to(stubConfig);
-  container.bind(Logger).to(stubLogger);
-  container.bind(Router).toSelf();
-  container.bind(Dispatcher).toSelf();
-
-  for (const controller of controllers) {
-    container.bind(controller).toSelf();
-  }
-
-  const router = container.get(Router);
-  controllers.forEach(controller => router.register(controller));
-
-  return { container, dispatcher: container.get(Dispatcher) };
-};
-
-const startTestServer = (dispatcher: Dispatcher) =>
-  new Promise<{ baseUrl: string; close: () => Promise<void> }>(
-    (resolve, reject) => {
-      dispatcher.bootstrap();
-
-      const server = dispatcher['httpServer'] as http.Server;
-
-      server.once('error', reject);
-      server.once('listening', () => {
-        const address = server.address();
-
-        if (!address || typeof address === 'string') {
-          reject(new Error('Test server failed to bind to a port'));
-
-          return;
-        }
-
-        resolve({
-          baseUrl: `http://127.0.0.1:${address.port}`,
-          close: () => new Promise(res => server.close(() => res())),
-        });
-      });
-    },
-  );
+import {
+  createTestApp,
+  startTestServer,
+  stubConfig,
+  stubLogger,
+} from './utils.ts';
 
 test.describe('Dispatcher', () => {
   test('route resolves through controller prefix and @Param', async () => {
@@ -123,12 +81,41 @@ test.describe('Dispatcher', () => {
     }
   });
 
+  test('invalid JSON body is rejected with 400', async () => {
+    @Injectable()
+    @Controller('users')
+    class UsersController {
+      @Post()
+      createUser(@Body() user: CreateUserInput) {
+        return user;
+      }
+    }
+
+    const { dispatcher } = createTestApp([UsersController]);
+    const { baseUrl, close } = await startTestServer(dispatcher);
+
+    try {
+      const res = await fetch(`${baseUrl}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{"email": "',
+      });
+
+      const text = await res.text();
+
+      assert.equal(res.status, 400);
+      assert.match(text, /Invalid JSON body/);
+    } finally {
+      await close();
+    }
+  });
+
   test('invalid DTO body is rejected with 400 and field details', async () => {
     @Injectable()
     @Controller('users')
     class UsersController {
       @Post()
-      createUser(@Body() user: CreateUserDto) {
+      createUser(@Body(CreateUserSchema) user: CreateUserInput) {
         return user;
       }
     }
@@ -146,6 +133,7 @@ test.describe('Dispatcher', () => {
       const text = await res.text();
 
       assert.equal(res.status, 400);
+      assert.match(text, /Validation failed/);
       assert.match(text, /email/);
       assert.match(text, /field/);
       assert.match(text, /constraints/);
@@ -154,14 +142,15 @@ test.describe('Dispatcher', () => {
     }
   });
 
-  test('valid DTO body reaches the handler as a real DTO instance', async () => {
+  test('valid DTO body reaches the handler as a real DTO instance with correct response status', async () => {
     const received: unknown[] = [];
 
     @Injectable()
     @Controller('users')
     class UsersController {
       @Post()
-      createUser(@Body() user: CreateUserDto) {
+      @HttpCode(201)
+      createUser(@Body(CreateUserSchema) user: CreateUserInput) {
         received.push(user);
 
         return user;
@@ -172,17 +161,16 @@ test.describe('Dispatcher', () => {
     const { baseUrl, close } = await startTestServer(dispatcher);
 
     try {
+      const testUser = { email: 'test@test.com' };
       const res = await fetch(`${baseUrl}/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: 'user@test.com',
-        }),
+        body: JSON.stringify(testUser),
       });
 
-      assert.equal(res.status, 200);
+      assert.equal(res.status, 201);
       assert.equal(received.length, 1);
-      assert.ok(received[0] instanceof CreateUserDto);
+      assert.deepEqual(received[0], testUser);
     } finally {
       await close();
     }
@@ -216,6 +204,9 @@ test.describe('Dispatcher', () => {
     container.bind(Logger).to(stubLogger);
     container.bind(Router).toSelf();
     container.bind(Dispatcher).toSelf();
+    container.bind(RequestContext).toSelf();
+    container.bind(GlobalExceptionFilter).toSelf();
+    container.bind(GlobalZodValidationPipe).toSelf();
     container.bind(UsersService).toSelf();
     container.bind(UsersController).toSelf();
 
@@ -276,8 +267,8 @@ test.describe('Dispatcher', () => {
       }
     }
 
-    const baseParams = getMethodParamsMap(Base, 'getOne');
-    const childParams = getMethodParamsMap(Child, 'getOne');
+    const baseParams = getMethodsParams(Base, 'getOne') ?? [];
+    const childParams = getMethodsParams(Child, 'getOne') ?? [];
 
     assert.equal(baseParams.length, 1);
     assert.equal(baseParams[0].name, 'id');

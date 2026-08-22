@@ -1,22 +1,26 @@
 import 'reflect-metadata';
 
+import { z } from 'zod';
+
 import { METHOD_PARAMS } from '../tokens.ts';
-import type { Ctor, MethodParamsMap, MethodParamType } from '../types/index.ts';
+import type { Ctor, MethodParam, MethodParamType } from '../types/index.ts';
 
-export const getControllerMethodsParams = (target: Ctor) =>
-  Reflect.getMetadata(METHOD_PARAMS, target) as MethodParamsMap | undefined;
+export const getMethodsParams = (target: Ctor, propertyKey: string | symbol) =>
+  Reflect.getMetadata(METHOD_PARAMS, target, propertyKey) as
+    | MethodParam[]
+    | undefined;
 
-export const getOwnControllerMethodsParams = (target: Ctor) =>
-  Reflect.getOwnMetadata(METHOD_PARAMS, target) as MethodParamsMap | undefined;
-
-export const getMethodParamsMap = (
+export const getOwnMethodsParams = (
   target: Ctor,
   propertyKey: string | symbol,
-) => (getControllerMethodsParams(target) ?? new Map()).get(propertyKey) ?? [];
+) =>
+  Reflect.getOwnMetadata(METHOD_PARAMS, target, propertyKey) as
+    | MethodParam[]
+    | undefined;
 
 const paramDecoratorFactory =
   (type: MethodParamType) =>
-  (name?: string): ParameterDecorator =>
+  (nameOrSchema?: string | z.ZodType, name?: string): ParameterDecorator =>
   (target, propertyKey, parameterIndex) => {
     if (!propertyKey) {
       throw new Error(
@@ -24,28 +28,33 @@ const paramDecoratorFactory =
       );
     }
 
-    const paramTypes = Reflect.getMetadata(
-      'design:paramtypes',
-      target,
-      propertyKey,
-    ) as Ctor[] | undefined;
+    const isSchema = nameOrSchema instanceof z.ZodType;
+    const resolvedName = isSchema ? name : nameOrSchema;
+    const schema = isSchema ? nameOrSchema : undefined;
 
-    const ownParams = getOwnControllerMethodsParams(target.constructor as Ctor);
-    const inheritedParams = getControllerMethodsParams(
+    const ownParams = getOwnMethodsParams(
       target.constructor as Ctor,
+      propertyKey,
+    );
+    const inheritedParams = getMethodsParams(
+      target.constructor as Ctor,
+      propertyKey,
     );
 
-    const params = ownParams ?? new Map(inheritedParams ?? []);
-    const paramsForProperty = [...(params.get(propertyKey as string) || [])];
-    paramsForProperty.push({
+    const params = ownParams ?? [...(inheritedParams ?? [])];
+    params.push({
       index: parameterIndex,
       type,
-      name,
-      dtoClass: paramTypes?.[parameterIndex],
+      name: resolvedName,
+      schema,
     });
-    params.set(propertyKey as string, paramsForProperty);
 
-    Reflect.defineMetadata(METHOD_PARAMS, params, target.constructor);
+    Reflect.defineMetadata(
+      METHOD_PARAMS,
+      params,
+      target.constructor,
+      propertyKey,
+    );
   };
 
 export const Param = paramDecoratorFactory('param');

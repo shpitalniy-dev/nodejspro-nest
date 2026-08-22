@@ -6,7 +6,7 @@ import { getControllerRoutes } from './decorators/methods.ts';
 import type { Ctor, HttpMethod } from './types/index.ts';
 import { buildSegments } from './utils/segments.ts';
 
-type HandlerItem = {
+export type MatchedRouteItem = {
   controller: Ctor;
   property: string | symbol;
   params: { [key: string]: string };
@@ -42,7 +42,7 @@ export class Router {
     }
   }
 
-  match(path: string, method: HttpMethod): HandlerItem | null {
+  match(path: string, method: HttpMethod): MatchedRouteItem | null {
     const route = this.routes.get(method);
 
     if (!route) {

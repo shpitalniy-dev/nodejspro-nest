@@ -55,3 +55,45 @@ For dependencies that are not classes — plain values, strings, or interfaces, 
 Each decorator call stores one entry — `{ index, type, name, dtoClass }` — in a map keyed by method name, saved as `METHOD_PARAMS` metadata on the controller class. `type` records which decorator was used (`param` / `query` / `body`), `name` is the key to pull out of that source (or none, for the whole object), and `dtoClass` is whatever type TypeScript resolved for that parameter, used later to run validation on `@Body()` arguments.
 
 At request time, the `Dispatcher` looks up this list for the matched route's controller and method, then rebuilds the arguments array by `index`: for each entry it resolves the actual value from the matching source — `route.params` for `@Param`, the parsed query string for `@Query`, the parsed JSON body for `@Body` — and writes it into `args[index]`. Assembling the array by index, rather than by the order the decorators happened to run in, is what makes the result correct regardless of execution order: TypeScript evaluates parameter decorators right-to-left, so without the recorded index, values could land in the wrong argument slot.
+
+## Lifecycle | Part 3
+
+Every request passes through the same six stages, in the same order, on every route:
+
+```
+Request
+   │
+   ▼
+Middleware          (RequestContext: reads/generates X-Request-Id, opens the ALS scope)
+   │
+   ▼
+Guard               (canActivate → false stops here with 403, nothing below ever runs)
+   │
+   ▼
+Interceptor:before ─┐
+   │                │
+   ▼                │  LoggingInterceptor wraps everything in the middle
+Pipe                │  (GlobalZodValidationPipe.transform)
+   │                │
+   ▼                │
+Handler             │  (the controller method itself)
+   │                │
+   ▼                │
+Interceptor:after  ─┘
+   │
+   ▼
+Response
+
+   Anything thrown at any of the steps above
+                  │
+                  ▼
+   GlobalExceptionFilter.catch → HTTP response (never an uncaught crash)
+```
+
+Guards and interceptors look similar but answer different questions. A guard only decides _whether_ the request proceeds at all — it runs once, before anything else, and can never see or touch the response. An interceptor wraps the call — it runs code both before and after `next()`, so it can time the handler, log its result, or short-circuit it entirely, which is exactly why `LoggingInterceptor` can measure duration and a guard structurally cannot.
+
+### Why `AsyncLocalStorage`, not a global variable
+
+A module-level variable like `let currentRequestId` doesn't work due to requests overlap. The handler for request A does some `await` — a DB call, `fetch`, anything asynchronous — and while it's suspended, the event loop is free to start handling request B, which promptly overwrites the same global with its own id. When A's `await` resolves and it finally logs `currentRequestId`, it reads B's id instead of its own. This isn't a rare edge case; it's the default outcome the moment a server handles more than one request concurrently.
+
+`AsyncLocalStorage` solves this because the store isn't attached to a variable in module scope — it's attached to the _async execution context_ itself. `RequestContext.use()` calls `als.run({ requestId }, next)`, and everything that happens as a result of calling `next()` — every `await`, every nested async call — inherits that same context, correctly isolated from whatever other requests are concurrently running through the same code. That's what lets `UserService.getUserById`, two layers below the handler, read the right `requestId` through `this.requestContext.requestId` with no parameter carrying it there, and what the concurrent-request test in `test/lifecycle-order.test.ts` directly verifies by firing ten requests at once and confirming none of their ids cross over.

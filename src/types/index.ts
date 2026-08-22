@@ -1,3 +1,6 @@
+import { IncomingMessage, ServerResponse } from 'node:http';
+import { z } from 'zod';
+
 export type NodeEnv = 'development' | 'production';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,11 +36,40 @@ export const methodParamTypes = {
 export type MethodParamType =
   (typeof methodParamTypes)[keyof typeof methodParamTypes];
 
-export interface MethodParamItem {
+export interface MethodParam {
   index: number;
   type: MethodParamType;
   name?: string;
-  dtoClass?: Ctor;
+  schema?: z.ZodType;
 }
 
-export type MethodParamsMap = Map<string | symbol, MethodParamItem[]>;
+export type MethodGuard = Ctor<Guard>;
+export type MethodInterceptor = Ctor<Interceptor>;
+
+export interface ExecutionContext {
+  req: IncomingMessage;
+  res: ServerResponse;
+}
+export interface Guard {
+  canActivate(ctx: ExecutionContext): Promise<boolean>;
+}
+
+export interface Middleware {
+  use(
+    req: IncomingMessage,
+    res: ServerResponse,
+    next: () => Promise<void>,
+  ): Promise<void>;
+}
+
+export interface Interceptor {
+  intercept(ctx: ExecutionContext, next: () => Promise<void>): Promise<void>;
+}
+
+export interface ExceptionFilter {
+  catch(exception: unknown, ctx: ExecutionContext): void;
+}
+
+export interface PipeTransform<R = unknown> {
+  transform(...args: unknown[]): R | Promise<R>;
+}

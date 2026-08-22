@@ -28,13 +28,23 @@ export class Container {
     };
   }
 
-  get<T extends object>(target: Ctor<T>, path: string[] = []) {
+  get<T extends object>(target: Ctor<T>, path: string[] = []): T {
     if (!hasInjectableMetadata(target)) {
       throw new Error(`${target.name} misses @Injectable() decorator`);
     }
 
     if (!this.recipes.has(target)) {
       throw new Error(`No binding found for dependency: ${target.name}`);
+    }
+
+    const ownRecipe = this.recipes.get(target);
+
+    if (ownRecipe !== target) {
+      if (typeof ownRecipe === 'function') {
+        return this.get(ownRecipe as Ctor, [...path, target.name]) as T;
+      }
+
+      return ownRecipe as T;
     }
 
     const options = getInjectableOptions(target);
