@@ -1,4 +1,5 @@
 import { IncomingMessage, ServerResponse } from 'node:http';
+import { z } from 'zod';
 
 export type NodeEnv = 'development' | 'production';
 
@@ -39,7 +40,7 @@ export interface MethodParam {
   index: number;
   type: MethodParamType;
   name?: string;
-  dtoClass?: Ctor;
+  schema?: z.ZodType;
 }
 
 export type MethodGuard = Ctor<Guard>;
@@ -67,4 +68,8 @@ export interface Interceptor {
 
 export interface ExceptionFilter {
   catch(exception: unknown, ctx: ExecutionContext): void;
+}
+
+export interface PipeTransform<R = unknown> {
+  transform(...args: unknown[]): R | Promise<R>;
 }

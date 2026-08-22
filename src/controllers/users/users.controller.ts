@@ -8,10 +8,16 @@ import { Injectable } from '../../decorators/injectable.ts';
 import { UseInterceptors } from '../../decorators/interceptor.ts';
 import { Get, Post } from '../../decorators/methods.ts';
 import { Body, Param, Query } from '../../decorators/params.ts';
-import { CreateUserDto } from '../../dto/create-user.dto.ts';
 import { AuthGuard } from '../../guards/auth.guard.ts';
 import { LoggingInterceptor } from '../../interceptors/logging.interceptor.ts';
 import { UserService } from '../../services/user.service.ts';
+
+import type { CreateUserInput } from './users.schemas.ts';
+import {
+  CreateUserSchema,
+  IdParamSchema,
+  LimitQuerySchema,
+} from './users.schemas.ts';
 
 @Injectable()
 @Controller('users')
@@ -20,7 +26,7 @@ export class Users {
 
   @Get()
   @UseGuards(AuthGuard)
-  getAllUsers(@Query('limit') limit: string) {
+  getAllUsers(@Query(LimitQuerySchema, 'limit') limit: number) {
     return {
       limit,
       users: Array.from({ length: Number(limit) }, (_, i) => ({ id: i + 1 })),
@@ -30,14 +36,14 @@ export class Users {
   @Get(':id')
   @UseGuards(AuthGuard)
   @UseInterceptors(LoggingInterceptor)
-  getUser(@Param('id') id: string) {
+  getUser(@Param(IdParamSchema, 'id') id: string) {
     return this.userService.getUserById(id);
   }
 
   @Post()
   @HttpCode(201)
   @UseGuards(AuthGuard)
-  createUser(@Body() user: CreateUserDto) {
+  createUser(@Body(CreateUserSchema) user: CreateUserInput) {
     return user;
   }
 }

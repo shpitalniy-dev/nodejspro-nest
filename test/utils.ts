@@ -10,6 +10,7 @@ import { Dispatcher } from '../src/dispatcher.ts';
 import { GlobalExceptionFilter } from '../src/filters/exception.filter.ts';
 import { AuthGuard } from '../src/guards/auth.guard.ts';
 import { LoggingInterceptor } from '../src/interceptors/logging.interceptor.ts';
+import { GlobalZodValidationPipe } from '../src/pipes/zod-validation.pipe.ts';
 import { Router } from '../src/router.ts';
 import type { Ctor } from '../src/types/index.ts';
 
@@ -34,6 +35,7 @@ export const createTestApp = (controllers: Ctor[]) => {
   container.bind(AuthGuard).toSelf();
   container.bind(LoggingInterceptor).toSelf();
   container.bind(GlobalExceptionFilter).toSelf();
+  container.bind(GlobalZodValidationPipe).toSelf();
   container.bind(Router).toSelf();
   container.bind(Dispatcher).toSelf();
 

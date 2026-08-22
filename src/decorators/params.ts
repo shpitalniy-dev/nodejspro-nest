@@ -1,5 +1,7 @@
 import 'reflect-metadata';
 
+import { z } from 'zod';
+
 import { METHOD_PARAMS } from '../tokens.ts';
 import type { Ctor, MethodParam, MethodParamType } from '../types/index.ts';
 
@@ -18,7 +20,7 @@ export const getOwnMethodsParams = (
 
 const paramDecoratorFactory =
   (type: MethodParamType) =>
-  (name?: string): ParameterDecorator =>
+  (nameOrSchema?: string | z.ZodType, name?: string): ParameterDecorator =>
   (target, propertyKey, parameterIndex) => {
     if (!propertyKey) {
       throw new Error(
@@ -26,11 +28,9 @@ const paramDecoratorFactory =
       );
     }
 
-    const paramTypes = Reflect.getMetadata(
-      'design:paramtypes',
-      target,
-      propertyKey,
-    ) as Ctor[] | undefined;
+    const isSchema = nameOrSchema instanceof z.ZodType;
+    const resolvedName = isSchema ? name : nameOrSchema;
+    const schema = isSchema ? nameOrSchema : undefined;
 
     const ownParams = getOwnMethodsParams(
       target.constructor as Ctor,
@@ -45,8 +45,8 @@ const paramDecoratorFactory =
     params.push({
       index: parameterIndex,
       type,
-      name,
-      dtoClass: paramTypes?.[parameterIndex],
+      name: resolvedName,
+      schema,
     });
 
     Reflect.defineMetadata(

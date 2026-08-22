@@ -7,6 +7,8 @@ import { Container } from '../src/container.ts';
 import { RequestContext } from '../src/context/request-context.ts';
 import { Config } from '../src/controllers/config/index.ts';
 import { Logger } from '../src/controllers/logger/index.ts';
+import type { CreateUserInput } from '../src/controllers/users/users.schemas.ts';
+import { CreateUserSchema } from '../src/controllers/users/users.schemas.ts';
 import { Controller } from '../src/decorators/controller.ts';
 import { HttpCode } from '../src/decorators/http-code.ts';
 import { Inject } from '../src/decorators/inject.ts';
@@ -19,8 +21,8 @@ import {
   Query,
 } from '../src/decorators/params.ts';
 import { Dispatcher } from '../src/dispatcher.ts';
-import { CreateUserDto } from '../src/dto/create-user.dto.ts';
 import { GlobalExceptionFilter } from '../src/filters/exception.filter.ts';
+import { GlobalZodValidationPipe } from '../src/pipes/zod-validation.pipe.ts';
 import { Router } from '../src/router.ts';
 
 import {
@@ -84,7 +86,7 @@ test.describe('Dispatcher', () => {
     @Controller('users')
     class UsersController {
       @Post()
-      createUser(@Body() user: CreateUserDto) {
+      createUser(@Body() user: CreateUserInput) {
         return user;
       }
     }
@@ -113,7 +115,7 @@ test.describe('Dispatcher', () => {
     @Controller('users')
     class UsersController {
       @Post()
-      createUser(@Body() user: CreateUserDto) {
+      createUser(@Body(CreateUserSchema) user: CreateUserInput) {
         return user;
       }
     }
@@ -148,7 +150,7 @@ test.describe('Dispatcher', () => {
     class UsersController {
       @Post()
       @HttpCode(201)
-      createUser(@Body() user: CreateUserDto) {
+      createUser(@Body(CreateUserSchema) user: CreateUserInput) {
         received.push(user);
 
         return user;
@@ -159,17 +161,16 @@ test.describe('Dispatcher', () => {
     const { baseUrl, close } = await startTestServer(dispatcher);
 
     try {
+      const testUser = { email: 'test@test.com' };
       const res = await fetch(`${baseUrl}/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: 'user@test.com',
-        }),
+        body: JSON.stringify(testUser),
       });
 
       assert.equal(res.status, 201);
       assert.equal(received.length, 1);
-      assert.ok(received[0] instanceof CreateUserDto);
+      assert.deepEqual(received[0], testUser);
     } finally {
       await close();
     }
@@ -205,6 +206,7 @@ test.describe('Dispatcher', () => {
     container.bind(Dispatcher).toSelf();
     container.bind(RequestContext).toSelf();
     container.bind(GlobalExceptionFilter).toSelf();
+    container.bind(GlobalZodValidationPipe).toSelf();
     container.bind(UsersService).toSelf();
     container.bind(UsersController).toSelf();
 

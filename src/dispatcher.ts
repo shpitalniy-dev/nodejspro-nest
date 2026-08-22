@@ -17,7 +17,7 @@ import {
   HttpException,
   NotFoundException,
 } from './filters/exception.filter.ts';
-import { validateBody } from './pipes/validation.pipe.ts';
+import { GlobalZodValidationPipe } from './pipes/zod-validation.pipe.ts';
 import {
   Ctor,
   type HttpMethod,
@@ -27,14 +27,6 @@ import {
 import { hasBody, parseBody } from './utils/http.ts';
 import { Container } from './container.ts';
 import { MatchedRouteItem, Router } from './router.ts';
-
-const TRIVIAL_TYPES = new Set<unknown>([
-  String,
-  Number,
-  Boolean,
-  Array,
-  Object,
-]);
 
 @Injectable()
 export class Dispatcher {
@@ -46,6 +38,8 @@ export class Dispatcher {
     @Inject(Logger) private logger: Logger,
     @Inject(Router) private router: Router,
     @Inject(Container) private container: Container,
+    @Inject(GlobalZodValidationPipe)
+    private validationPipe: GlobalZodValidationPipe,
     @Inject(GlobalExceptionFilter)
     private exceptionFilter: GlobalExceptionFilter,
   ) {}
@@ -169,27 +163,22 @@ export class Dispatcher {
     const methodParams = getMethodsParams(controller, property) ?? [];
 
     for (const param of methodParams) {
-      if (param.type === methodParamTypes.param) {
-        args[param.index] = param.name ? params[param.name] : params;
-      }
+      let value: unknown;
 
-      if (param.type === methodParamTypes.query) {
-        args[param.index] = param.name
+      if (param.type === methodParamTypes.param) {
+        value = param.name ? params[param.name] : params;
+      } else if (param.type === methodParamTypes.query) {
+        value = param.name
           ? (queryParams.get(param.name) ?? undefined)
           : Object.fromEntries(queryParams);
+      } else if (param.type === methodParamTypes.body) {
+        value = param.name ? body?.[param.name] : body;
       }
 
-      if (param.type === methodParamTypes.body) {
-        const value = param.name ? body?.[param.name] : body;
-        const dtoClass =
-          param.dtoClass && !TRIVIAL_TYPES.has(param.dtoClass)
-            ? param.dtoClass
-            : undefined;
-
-        args[param.index] = dtoClass
-          ? await validateBody(dtoClass, value)
-          : value;
-      }
+      const schema = param.schema ? param.schema : undefined;
+      args[param.index] = schema
+        ? await this.validationPipe.transform(schema, value, param.name)
+        : value;
     }
 
     return args;

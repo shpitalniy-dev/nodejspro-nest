@@ -4,7 +4,7 @@ dev-build:
 	docker compose build --no-cache
 
 dev-up:
-	docker compose up
+	docker compose up --build -V
 
 dev-down:
 	docker compose down
